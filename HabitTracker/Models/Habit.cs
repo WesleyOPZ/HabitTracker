@@ -9,8 +9,9 @@ public class Habit
     public int LongestStreak { get; set; }
     public int TotalXP { get; set; }
     public DateTime CreatedAt { get; set; }
+    public Difficulty Difficulty { get; set; } = Difficulty.Normal;
     public List<DateTime> CompletedDates { get; set; } = new List<DateTime>();
-
+    
     public bool IsCompletedToday()
     {
         return CompletedDates.Any(d => d.Date == DateTime.Today);

@@ -16,7 +16,7 @@ public class HabitService
         _nextId = _habits.Any() ? _habits.Max(h => h.Id) + 1 : 1;
     }
 
-    public void CreateHabit(string name, string description = "")
+    public void CreateHabit(string name, string description = "", Difficulty difficulty = Difficulty.Normal)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -33,6 +33,7 @@ public class HabitService
             CurrentStreak = 0,
             LongestStreak = 0,
             TotalXP = 0,
+            Difficulty = difficulty,
             CompletedDates = new List<DateTime>()
         };
 
@@ -57,13 +58,14 @@ public class HabitService
         foreach (var habit in _habits.OrderByDescending(h => h.CurrentStreak))
         {
             string status = habit.IsCompletedToday() ? "✅" : "⭕";
-            string streak = habit.CurrentStreak > 0 
-                ? $"🔥 {habit.CurrentStreak} days" 
+            string streak = habit.CurrentStreak > 0
+                ? $"🔥 {habit.CurrentStreak} days"
                 : "No streak yet";
 
             Console.WriteLine($"{status} [{habit.Id}] {habit.Name}");
-            Console.WriteLine($"   Streak: {streak} | Best: {habit.LongestStreak} days | XP: {habit.TotalXP}");
-            
+            Console.WriteLine(
+                $"   Streak: {streak} | Best: {habit.LongestStreak} days | XP: {habit.TotalXP} | Difficulty: {habit.Difficulty}");
+
             if (!string.IsNullOrEmpty(habit.Description))
             {
                 Console.WriteLine($"   Description: {habit.Description}");
@@ -115,8 +117,8 @@ public class HabitService
             habit.LongestStreak = habit.CurrentStreak;
         }
 
-        // Award XP (base 10 + streak bonus)
-        int xpEarned = 10 + (habit.CurrentStreak - 1);
+        // Award XP (base from difficulty + streak bonus)
+        int xpEarned = (int)habit.Difficulty + (habit.CurrentStreak - 1);
         habit.TotalXP += xpEarned;
 
         _storage.SaveHabits(_habits);
@@ -163,7 +165,7 @@ public class HabitService
         Console.WriteLine($"✅ Completed today:        {completedToday}/{totalHabits}");
         Console.WriteLine($"⭐ Total XP:               {totalXP}");
         Console.WriteLine($"🎯 Total completions:      {totalCompletions}");
-        
+
         if (bestStreak != null)
         {
             Console.WriteLine($"🔥 Best current streak:    {bestStreak.Name} ({bestStreak.CurrentStreak} days)");

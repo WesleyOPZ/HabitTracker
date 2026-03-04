@@ -1,4 +1,5 @@
-﻿using HabitTracker.Services;
+﻿using HabitTracker.Models;
+using HabitTracker.Services;
 
 namespace HabitTracker;
 
@@ -35,8 +36,26 @@ class Program
 
                     Console.Write("Description (optional): ");
                     string? description = Console.ReadLine();
+                    
+                    Console.WriteLine("\nChoose difficulty:");
+                    Console.WriteLine("1 - Easy (5 XP)");
+                    Console.WriteLine("2 - Normal (10 XP)");
+                    Console.WriteLine("3 - Hard (20 XP)");
+                    Console.WriteLine("4 - Legendary (50 XP)");
+                    Console.Write("Choose: ");
+                    
+                    string? diffInput = Console.ReadLine();
 
-                    habitService.CreateHabit(name ?? "", description ?? "");
+                    Difficulty difficulty = diffInput switch
+                    {
+                        "1" => Difficulty.Easy,
+                        "2" => Difficulty.Normal,
+                        "3" => Difficulty.Hard,
+                        "4" => Difficulty.Legendary,
+                        _ => Difficulty.Normal
+                    };
+
+                    habitService.CreateHabit(name ?? "", description ?? "", difficulty);
                     break;
 
                 case "2":
@@ -53,6 +72,7 @@ class Program
                     {
                         Console.WriteLine("\n✗ Invalid ID!");
                     }
+
                     break;
 
                 case "4":
@@ -65,6 +85,7 @@ class Program
                     {
                         Console.WriteLine("\n✗ Invalid ID!");
                     }
+
                     break;
 
                 case "5":
@@ -81,6 +102,7 @@ class Program
                     {
                         Console.WriteLine("\n✗ Invalid ID!");
                     }
+
                     break;
 
                 case "0":
@@ -95,7 +117,7 @@ class Program
             Console.WriteLine("\nPress any key to continue...");
             Console.ReadKey();
             Console.Clear();
-            
+
             Console.WriteLine("╔════════════════════════════════════════════════════════════╗");
             Console.WriteLine("║            🎯 HABIT TRACKER - Build Better Habits           ║");
             Console.WriteLine("╚════════════════════════════════════════════════════════════╝");
