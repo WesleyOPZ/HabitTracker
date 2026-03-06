@@ -59,7 +59,7 @@ public class HabitService
         {
             string status = habit.IsCompletedToday() ? "✅" : "⭕";
             string streak = habit.CurrentStreak > 0
-                ? $"🔥 {habit.CurrentStreak} days"
+                ? $"{habit.CurrentStreak} days"
                 : "No streak yet";
 
             Console.WriteLine($"{status} [{habit.Id}] {habit.Name}");
@@ -123,9 +123,18 @@ public class HabitService
 
         _storage.SaveHabits(_habits);
 
-        Console.WriteLine($"\n✨ Great job! You completed '{habit.Name}'!");
-        Console.WriteLine($"🔥 Current streak: {habit.CurrentStreak} days");
-        Console.WriteLine($"⭐ XP earned: +{xpEarned} (Total: {habit.TotalXP})");
+        Console.WriteLine($"\n Great job! You completed '{habit.Name}'!");
+        Console.WriteLine($"Current streak: {habit.CurrentStreak} days");
+        Console.WriteLine($"XP earned: +{xpEarned} (Total: {habit.TotalXP})");
+        
+        int totalXP = _habits.Sum(h => h.TotalXP);
+        int oldLevel = LevelSystem.CalculateLevel(totalXP - xpEarned);
+        int newLevel = LevelSystem.CalculateLevel(totalXP);
+        if (newLevel > oldLevel)
+        {
+            string levelName = LevelSystem.GetLevelName(newLevel);
+            Console.WriteLine($"\n🎉 LEVEL UP! You reached level {newLevel} - {levelName}!");
+        }
     }
 
     public void DeleteHabit(int id)
@@ -148,27 +157,41 @@ public class HabitService
     {
         if (!_habits.Any())
         {
-            Console.WriteLine("\n📭 No habits to show statistics for.");
+            Console.WriteLine("\nNo habits to show statistics for.");
             return;
         }
 
         int totalHabits = _habits.Count;
         int completedToday = _habits.Count(h => h.IsCompletedToday());
         int totalXP = _habits.Sum(h => h.TotalXP);
+        int currentLevel = LevelSystem.CalculateLevel(totalXP);
+        string levelName = LevelSystem.GetLevelName(currentLevel);
+        int xpForNext = LevelSystem.GetXpForNextLevel(currentLevel);
+        int xpProgress = LevelSystem.GetXpProgressInCurrentLevel(totalXP, currentLevel);
         int totalCompletions = _habits.Sum(h => h.CompletedDates.Count);
         var bestStreak = _habits.MaxBy(h => h.CurrentStreak);
 
         Console.WriteLine("\n╔════════════════════════════════════════════════════════════╗");
         Console.WriteLine("║                      STATISTICS                            ║");
         Console.WriteLine("╚════════════════════════════════════════════════════════════╝");
-        Console.WriteLine($"\n📊 Total habits:           {totalHabits}");
-        Console.WriteLine($"✅ Completed today:        {completedToday}/{totalHabits}");
-        Console.WriteLine($"⭐ Total XP:               {totalXP}");
-        Console.WriteLine($"🎯 Total completions:      {totalCompletions}");
+        Console.WriteLine($"\nTotal habits:           {totalHabits}");
+        Console.WriteLine($"Completed today:        {completedToday}/{totalHabits}");
+        Console.WriteLine($"Total XP:               {totalXP}");
+        Console.WriteLine($"Current Level:          {currentLevel} - {levelName}");
+        if (xpForNext > 0)
+        {
+            Console.WriteLine($"XP to next level:       {xpProgress}/{xpForNext}");
+        }
+        else
+        {
+            Console.WriteLine($"MAX LEVEL REACHED!");
+        }
+        Console.WriteLine($"Total completions:      {totalCompletions}");
+        Console.WriteLine($"Total completions:      {totalCompletions}");
 
         if (bestStreak != null)
         {
-            Console.WriteLine($"🔥 Best current streak:    {bestStreak.Name} ({bestStreak.CurrentStreak} days)");
+            Console.WriteLine($"Best current streak:    {bestStreak.Name} ({bestStreak.CurrentStreak} days)");
         }
 
         Console.WriteLine("\n════════════════════════════════════════════════════════════\n");
