@@ -16,7 +16,45 @@ public class HabitService
         _nextId = _habits.Any() ? _habits.Max(h => h.Id) + 1 : 1;
     }
 
-    public void CreateHabit(string name, string description = "", Difficulty difficulty = Difficulty.Normal)
+    private string GetCategoryIcon(Category category)
+    {
+        return category switch
+        {
+            Category.Health => "🏃",
+            Category.Study => "📚",
+            Category.Work => "💼",
+            Category.Personal => "🎯",
+            _ => "📌"
+        };
+    }
+
+    private void DisplayHabit(Habit habit)
+    {
+        string status = habit.IsCompletedToday() ? "✅" : "⭕";
+        string streak = habit.CurrentStreak > 0
+            ? $"{habit.CurrentStreak} days"
+            : "No streak yet";
+        Console.WriteLine($"{status} [{habit.Id}] {habit.Name}");
+        Console.WriteLine(
+            $"   {GetCategoryIcon(habit.Category)} Category: {habit.Category} | Difficulty: {habit.Difficulty} | " +
+            $"Streak: {streak} | Best: {habit.LongestStreak} days | XP: {habit.TotalXP}");
+
+        if (!string.IsNullOrEmpty(habit.Description))
+        {
+            Console.WriteLine($"   Description: {habit.Description}");
+        }
+
+        var lastCompleted = habit.LastCompletedDate();
+        if (lastCompleted.HasValue)
+        {
+            Console.WriteLine($"   Last completed: {lastCompleted.Value:dd/MM/yyyy}");
+        }
+
+        Console.WriteLine();
+    }
+
+    public void CreateHabit(string name, string description = "", Difficulty difficulty = Difficulty.Normal,
+        Category category = Category.Personal)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -34,6 +72,7 @@ public class HabitService
             LongestStreak = 0,
             TotalXP = 0,
             Difficulty = difficulty,
+            Category = category,
             CompletedDates = new List<DateTime>()
         };
 
@@ -57,27 +96,7 @@ public class HabitService
 
         foreach (var habit in _habits.OrderByDescending(h => h.CurrentStreak))
         {
-            string status = habit.IsCompletedToday() ? "✅" : "⭕";
-            string streak = habit.CurrentStreak > 0
-                ? $"{habit.CurrentStreak} days"
-                : "No streak yet";
-
-            Console.WriteLine($"{status} [{habit.Id}] {habit.Name}");
-            Console.WriteLine(
-                $"   Streak: {streak} | Best: {habit.LongestStreak} days | XP: {habit.TotalXP} | Difficulty: {habit.Difficulty}");
-
-            if (!string.IsNullOrEmpty(habit.Description))
-            {
-                Console.WriteLine($"   Description: {habit.Description}");
-            }
-
-            var lastCompleted = habit.LastCompletedDate();
-            if (lastCompleted.HasValue)
-            {
-                Console.WriteLine($"   Last completed: {lastCompleted.Value:dd/MM/yyyy}");
-            }
-
-            Console.WriteLine();
+            DisplayHabit(habit);
         }
     }
 
@@ -126,7 +145,7 @@ public class HabitService
         Console.WriteLine($"\n Great job! You completed '{habit.Name}'!");
         Console.WriteLine($"Current streak: {habit.CurrentStreak} days");
         Console.WriteLine($"XP earned: +{xpEarned} (Total: {habit.TotalXP})");
-        
+
         int totalXP = _habits.Sum(h => h.TotalXP);
         int oldLevel = LevelSystem.CalculateLevel(totalXP - xpEarned);
         int newLevel = LevelSystem.CalculateLevel(totalXP);
@@ -186,7 +205,7 @@ public class HabitService
         {
             Console.WriteLine($"MAX LEVEL REACHED!");
         }
-        Console.WriteLine($"Total completions:      {totalCompletions}");
+
         Console.WriteLine($"Total completions:      {totalCompletions}");
 
         if (bestStreak != null)
@@ -231,5 +250,24 @@ public class HabitService
 
         Console.WriteLine($"\nTotal completions: {habit.CompletedDates.Count}");
         Console.WriteLine();
+    }
+
+    public void ListHabitCategory(Category category)
+    {
+        var filtered = _habits.Where(h => h.Category == category).ToList();
+        if (!filtered.Any())
+        {
+            Console.WriteLine($"\n📭 No habits in category {category}.");
+            return;
+        }
+
+        Console.WriteLine($"\n╔════════════════════════════════════════════════╗");
+        Console.WriteLine($"║  HABITS - {category.ToString().ToUpper().PadRight(38)} ║");
+        Console.WriteLine($"╚════════════════════════════════════════════════╝\n");
+
+        foreach (var habit in filtered)
+        {
+            DisplayHabit(habit);
+        }
     }
 }

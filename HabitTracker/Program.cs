@@ -5,6 +5,48 @@ namespace HabitTracker;
 
 class Program
 {
+    static Category AskForCategory()
+    {
+        Console.WriteLine("\nChoose category:");
+        Console.WriteLine("1 - Health");
+        Console.WriteLine("2 - Study");
+        Console.WriteLine("3 - Work");
+        Console.WriteLine("4 - Personal");
+        Console.Write("Choose: ");
+
+        string? input = Console.ReadLine();
+
+        return input switch
+        {
+            "1" => Category.Health,
+            "2" => Category.Study,
+            "3" => Category.Work,
+            "4" => Category.Personal,
+            _ => Category.Personal
+        };
+    }
+
+    static Difficulty AskForDifficulty()
+    {
+        Console.WriteLine("\nChoose difficulty:");
+        Console.WriteLine("1 - Easy (5 XP)");
+        Console.WriteLine("2 - Normal (10 XP)");
+        Console.WriteLine("3 - Hard (20 XP)");
+        Console.WriteLine("4 - Legendary (50 XP)");
+        Console.Write("Choose: ");
+
+        string? input = Console.ReadLine();
+
+        return input switch
+        {
+            "1" => Difficulty.Easy,
+            "2" => Difficulty.Normal,
+            "3" => Difficulty.Hard,
+            "4" => Difficulty.Legendary,
+            _ => Difficulty.Normal
+        };
+    }
+
     static void Main(string[] args)
     {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
@@ -22,7 +64,8 @@ class Program
             Console.WriteLine("│  3 - Complete habit today                                  │");
             Console.WriteLine("│  4 - View habit history                                    │");
             Console.WriteLine("│  5 - Show statistics                                       │");
-            Console.WriteLine("│  6 - Delete habit                                          │");
+            Console.WriteLine("│  6 - Filter by Category                                    │");
+            Console.WriteLine("│  7 - Delete habit                                          │");
             Console.WriteLine("│  0 - Exit                                                  │");
             Console.WriteLine("└────────────────────────────────────────────────────────────┘");
             Console.Write("\nChoose an option: ");
@@ -37,26 +80,11 @@ class Program
 
                     Console.Write("Description (optional): ");
                     string? description = Console.ReadLine();
-                    
-                    Console.WriteLine("\nChoose difficulty:");
-                    Console.WriteLine("1 - Easy (5 XP)");
-                    Console.WriteLine("2 - Normal (10 XP)");
-                    Console.WriteLine("3 - Hard (20 XP)");
-                    Console.WriteLine("4 - Legendary (50 XP)");
-                    Console.Write("Choose: ");
-                    
-                    string? diffInput = Console.ReadLine();
 
-                    Difficulty difficulty = diffInput switch
-                    {
-                        "1" => Difficulty.Easy,
-                        "2" => Difficulty.Normal,
-                        "3" => Difficulty.Hard,
-                        "4" => Difficulty.Legendary,
-                        _ => Difficulty.Normal
-                    };
+                    Difficulty difficulty = AskForDifficulty();
+                    Category category = AskForCategory();
 
-                    habitService.CreateHabit(name ?? "", description ?? "", difficulty);
+                    habitService.CreateHabit(name ?? "", description ?? "", difficulty, category);
                     break;
 
                 case "2":
@@ -94,6 +122,11 @@ class Program
                     break;
 
                 case "6":
+                    Category filterCategory = AskForCategory();
+                    habitService.ListHabitCategory(filterCategory);
+                    break;
+
+                case "7":
                     Console.Write("\nEnter habit ID to delete: ");
                     if (int.TryParse(Console.ReadLine(), out int deleteId))
                     {
