@@ -5,6 +5,8 @@ A console application to build and track daily habits with gamification elements
 ## Features
 
 - ✅ Create and manage habits
+- ✅ Difficulty levels (Easy, Normal, Hard, Legendary)
+- ✅ Dynamic XP and level progression system (Duolingo-style)
 - 🔥 Track daily streaks
 - ⭐ Earn XP for completing habits
 - 📊 View statistics and history
@@ -23,13 +25,16 @@ dotnet run
 
 ## Roadmap
 
-- [ ] Desktop UI (WPF/Avalonia)
-- [ ] Level system
+- [x] Difficulty system
+- [x] Level progression system
 - [ ] Habit categories
+- [ ] Advanced statistics
+- [ ] Achievement system
+- [ ] Desktop UI (WPF/Avalonia)
 - [ ] Notifications
 - [ ] Charts and graphs
 
 ---
 
-**Version:** 1.0  
-**Status:** In development
+**Version:** 1.1  
+**Status:** In active development
