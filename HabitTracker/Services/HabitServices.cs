@@ -9,23 +9,15 @@ public class HabitService
     private readonly JsonStorage _storage;
     private int _nextId;
 
+    public StatisticsService Statistics { get; private set; }
+
+
     public HabitService()
     {
         _storage = new JsonStorage();
         _habits = _storage.LoadHabits();
         _nextId = _habits.Any() ? _habits.Max(h => h.Id) + 1 : 1;
-    }
-
-    private string GetCategoryIcon(Category category)
-    {
-        return category switch
-        {
-            Category.Health => "🏃",
-            Category.Study => "📚",
-            Category.Work => "💼",
-            Category.Personal => "🎯",
-            _ => "📌"
-        };
+        Statistics = new StatisticsService(_habits);
     }
 
     private void DisplayHabit(Habit habit)
@@ -36,7 +28,7 @@ public class HabitService
             : "No streak yet";
         Console.WriteLine($"{status} [{habit.Id}] {habit.Name}");
         Console.WriteLine(
-            $"   {GetCategoryIcon(habit.Category)} Category: {habit.Category} | Difficulty: {habit.Difficulty} | " +
+            $"   Category: {habit.Category} | Difficulty: {habit.Difficulty} | " +
             $"Streak: {streak} | Best: {habit.LongestStreak} days | XP: {habit.TotalXP}");
 
         if (!string.IsNullOrEmpty(habit.Description))
@@ -51,6 +43,17 @@ public class HabitService
         }
 
         Console.WriteLine();
+    }
+
+    private bool HasNoHabits()
+    {
+        if (!_habits.Any())
+        {
+            Console.WriteLine("\n📭 No habits to show statistics for.");
+            return true;
+        }
+
+        return false;
     }
 
     public void CreateHabit(string name, string description = "", Difficulty difficulty = Difficulty.Normal,
@@ -84,11 +87,7 @@ public class HabitService
 
     public void ListHabits()
     {
-        if (!_habits.Any())
-        {
-            Console.WriteLine("\n📭 No habits yet. Create your first one!");
-            return;
-        }
+        if (HasNoHabits()) return;
 
         Console.WriteLine("\n╔════════════════════════════════════════════════════════════╗");
         Console.WriteLine("║                      YOUR HABITS                           ║");
@@ -142,7 +141,7 @@ public class HabitService
 
         _storage.SaveHabits(_habits);
 
-        Console.WriteLine($"\n Great job! You completed '{habit.Name}'!");
+        Console.WriteLine($"\nGreat job! You completed '{habit.Name}'!");
         Console.WriteLine($"Current streak: {habit.CurrentStreak} days");
         Console.WriteLine($"XP earned: +{xpEarned} (Total: {habit.TotalXP})");
 
@@ -172,49 +171,6 @@ public class HabitService
         Console.WriteLine($"\n✓ Habit '{habit.Name}' deleted successfully!");
     }
 
-    public void ShowStatistics()
-    {
-        if (!_habits.Any())
-        {
-            Console.WriteLine("\nNo habits to show statistics for.");
-            return;
-        }
-
-        int totalHabits = _habits.Count;
-        int completedToday = _habits.Count(h => h.IsCompletedToday());
-        int totalXP = _habits.Sum(h => h.TotalXP);
-        int currentLevel = LevelSystem.CalculateLevel(totalXP);
-        string levelName = LevelSystem.GetLevelName(currentLevel);
-        int xpForNext = LevelSystem.GetXpForNextLevel(currentLevel);
-        int xpProgress = LevelSystem.GetXpProgressInCurrentLevel(totalXP, currentLevel);
-        int totalCompletions = _habits.Sum(h => h.CompletedDates.Count);
-        var bestStreak = _habits.MaxBy(h => h.CurrentStreak);
-
-        Console.WriteLine("\n╔════════════════════════════════════════════════════════════╗");
-        Console.WriteLine("║                      STATISTICS                            ║");
-        Console.WriteLine("╚════════════════════════════════════════════════════════════╝");
-        Console.WriteLine($"\nTotal habits:           {totalHabits}");
-        Console.WriteLine($"Completed today:        {completedToday}/{totalHabits}");
-        Console.WriteLine($"Total XP:               {totalXP}");
-        Console.WriteLine($"Current Level:          {currentLevel} - {levelName}");
-        if (xpForNext > 0)
-        {
-            Console.WriteLine($"XP to next level:       {xpProgress}/{xpForNext}");
-        }
-        else
-        {
-            Console.WriteLine($"MAX LEVEL REACHED!");
-        }
-
-        Console.WriteLine($"Total completions:      {totalCompletions}");
-
-        if (bestStreak != null)
-        {
-            Console.WriteLine($"Best current streak:    {bestStreak.Name} ({bestStreak.CurrentStreak} days)");
-        }
-
-        Console.WriteLine("\n════════════════════════════════════════════════════════════\n");
-    }
 
     public void ShowHabitHistory(int id)
     {

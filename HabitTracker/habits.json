@@ -1,0 +1,81 @@
+[
+  {
+    "Id": 1,
+    "Name": "Caminhar",
+    "Description": "Caminhar",
+    "CurrentStreak": 2,
+    "LongestStreak": 2,
+    "TotalXP": 101,
+    "CreatedAt": "2026-03-07T16:41:46.6048725-03:00",
+    "Difficulty": 50,
+    "Category": 1,
+    "CompletedDates": [
+      "2026-03-07T16:42:45.0076699-03:00",
+      "2026-03-08T12:07:18.445844-03:00"
+    ]
+  },
+  {
+    "Id": 2,
+    "Name": "Estudar",
+    "Description": "Estudar c#",
+    "CurrentStreak": 1,
+    "LongestStreak": 1,
+    "TotalXP": 50,
+    "CreatedAt": "2026-03-07T16:43:31.3813948-03:00",
+    "Difficulty": 50,
+    "Category": 1,
+    "CompletedDates": [
+      "2026-03-07T16:45:15.217502-03:00"
+    ]
+  },
+  {
+    "Id": 3,
+    "Name": "Ver filme",
+    "Description": "Filme",
+    "CurrentStreak": 1,
+    "LongestStreak": 1,
+    "TotalXP": 50,
+    "CreatedAt": "2026-03-07T16:47:59.1172398-03:00",
+    "Difficulty": 50,
+    "Category": 3,
+    "CompletedDates": [
+      "2026-03-07T17:34:34.5088965-03:00"
+    ]
+  },
+  {
+    "Id": 4,
+    "Name": "Assistir filme 1",
+    "Description": "",
+    "CurrentStreak": 0,
+    "LongestStreak": 0,
+    "TotalXP": 0,
+    "CreatedAt": "2026-03-07T17:34:00.7665007-03:00",
+    "Difficulty": 20,
+    "Category": 3,
+    "CompletedDates": []
+  },
+  {
+    "Id": 5,
+    "Name": "Assistir filme 4",
+    "Description": "",
+    "CurrentStreak": 0,
+    "LongestStreak": 0,
+    "TotalXP": 0,
+    "CreatedAt": "2026-03-07T17:34:13.8150862-03:00",
+    "Difficulty": 5,
+    "Category": 3,
+    "CompletedDates": []
+  },
+  {
+    "Id": 6,
+    "Name": "Assistir serie 1",
+    "Description": "",
+    "CurrentStreak": 0,
+    "LongestStreak": 0,
+    "TotalXP": 0,
+    "CreatedAt": "2026-03-07T17:34:26.296152-03:00",
+    "Difficulty": 10,
+    "Category": 3,
+    "CompletedDates": []
+  }
+]

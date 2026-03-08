@@ -65,7 +65,10 @@ class Program
             Console.WriteLine("│  4 - View habit history                                    │");
             Console.WriteLine("│  5 - Show statistics                                       │");
             Console.WriteLine("│  6 - Filter by Category                                    │");
-            Console.WriteLine("│  7 - Delete habit                                          │");
+            Console.WriteLine("│  7 - Category statistics                                   │");
+            Console.WriteLine("│  8 - Weekday statistics                                    │");
+            Console.WriteLine("│  9 - Week activity graph                                   │");
+            Console.WriteLine("│  99 - Delete habit                                         │");
             Console.WriteLine("│  0 - Exit                                                  │");
             Console.WriteLine("└────────────────────────────────────────────────────────────┘");
             Console.Write("\nChoose an option: ");
@@ -118,7 +121,7 @@ class Program
                     break;
 
                 case "5":
-                    habitService.ShowStatistics();
+                    habitService.Statistics.ShowStatistics();
                     break;
 
                 case "6":
@@ -127,6 +130,18 @@ class Program
                     break;
 
                 case "7":
+                    habitService.Statistics.ShowCategoryStatistics();
+                    break;
+
+                case "8":
+                    habitService.Statistics.ShowWeekdayStatistics();
+                    break;
+                
+                case "9":
+                    habitService.Statistics.ShowWeekActivityGraph();
+                    break;
+
+                case "99":
                     Console.Write("\nEnter habit ID to delete: ");
                     if (int.TryParse(Console.ReadLine(), out int deleteId))
                     {
