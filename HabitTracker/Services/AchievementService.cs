@@ -1,0 +1,237 @@
+using HabitTracker.Models;
+
+namespace HabitTracker.Services;
+
+public class AchievementService
+{
+    private List<Achievement> _achievements;
+    private readonly List<Habit> _habits;
+
+    public AchievementService(List<Habit> habits)
+    {
+        _habits = habits;
+        _achievements = InitializeAchievements();
+    }
+
+    private List<Achievement> InitializeAchievements()
+    {
+        return new List<Achievement>
+        {
+            // Iniciante
+            new Achievement
+            {
+                Type = AchievementType.FirstStep,
+                Name = "First Step",
+                Description = "Create your first habit",
+                Icon = "🌱",
+                IsUnlocked = false,
+            },
+            new Achievement
+            {
+                Type = AchievementType.Beginner,
+                Name = "Beginner",
+                Description = "Complete a habit for the first time",
+                Icon = "⭐",
+                IsUnlocked = false,
+            },
+            new Achievement
+            {
+                Type = AchievementType.GettingStarted,
+                Name = "Getting Started",
+                Description = "Complete 5 habits total",
+                Icon = "🔥",
+                IsUnlocked = false
+            },
+
+            // Consistência
+            new Achievement
+            {
+                Type = AchievementType.Dedicated,
+                Name = "Dedicated",
+                Description = "Maintain a 7-day streak",
+                Icon = "📅",
+                IsUnlocked = false
+            },
+            new Achievement
+            {
+                Type = AchievementType.Committed,
+                Name = "Committed",
+                Description = "Maintain a 30-day streak",
+                Icon = "🎯",
+                IsUnlocked = false
+            },
+            new Achievement
+            {
+                Type = AchievementType.Unstoppable,
+                Name = "Unstoppable",
+                Description = "Maintain a 100-day streak",
+                Icon = "💪",
+                IsUnlocked = false
+            },
+
+            // Exploração
+            new Achievement
+            {
+                Type = AchievementType.Diverse,
+                Name = "Diverse",
+                Description = "Have at least 1 habit in each category",
+                Icon = "🌈",
+                IsUnlocked = false
+            },
+            new Achievement
+            {
+                Type = AchievementType.CategoryMaster,
+                Name = "Category Master",
+                Description = "Complete 10 habits in a single category",
+                Icon = "📚",
+                IsUnlocked = false
+            },
+
+            // Níveis
+            new Achievement
+            {
+                Type = AchievementType.Level3,
+                Name = "Rising Star",
+                Description = "Reach level 3",
+                Icon = "🎖️",
+                IsUnlocked = false
+            },
+            new Achievement
+            {
+                Type = AchievementType.Level5,
+                Name = "Expert",
+                Description = "Reach level 5",
+                Icon = "🏆",
+                IsUnlocked = false
+            },
+            new Achievement
+            {
+                Type = AchievementType.Level7,
+                Name = "Legend",
+                Description = "Reach level 7",
+                Icon = "👑",
+                IsUnlocked = false
+            },
+
+            // XP
+            new Achievement
+            {
+                Type = AchievementType.Century,
+                Name = "Century",
+                Description = "Earn 100 total XP",
+                Icon = "⚡",
+                IsUnlocked = false
+            },
+            new Achievement
+            {
+                Type = AchievementType.HalfK,
+                Name = "Half K",
+                Description = "Earn 500 total XP",
+                Icon = "💎",
+                IsUnlocked = false
+            },
+            new Achievement
+            {
+                Type = AchievementType.Millennium,
+                Name = "Millennium",
+                Description = "Earn 1000 total XP",
+                Icon = "🔱",
+                IsUnlocked = false
+            }
+        };
+    }
+    // Checa TODAS as conquistas e desbloqueia as que foram atingidas
+
+    public List<Achievement> CheckAchievements()
+    {
+        var newlyUnlocked = new List<Achievement>();
+
+        // Checa cada conquista
+        foreach (var achievement in _achievements.Where(a => !a.IsUnlocked))
+        {
+            bool shouldUnlock = achievement.Type switch
+            {
+                // Iniciante
+                AchievementType.FirstStep => _habits.Count >= 1,
+                AchievementType.Beginner => _habits.Sum(h => h.CompletedDates.Count) >= 1,
+                AchievementType.GettingStarted => _habits.Sum(h => h.CompletedDates.Count) >= 5,
+
+                // Consistência
+                AchievementType.Dedicated => _habits.Any(h => h.CurrentStreak >= 7),
+                AchievementType.Committed => _habits.Any(h => h.CurrentStreak >= 30),
+                AchievementType.Unstoppable => _habits.Any(h => h.CurrentStreak >= 100),
+
+                // Exploração
+                AchievementType.Diverse => CheckDiverseAchievement(),
+                AchievementType.CategoryMaster => CheckCategoryMasterAchievement(),
+
+                // Níveis
+                AchievementType.Level3 => LevelSystem.CalculateLevel(_habits.Sum(h => h.TotalXP)) >= 3,
+                AchievementType.Level5 => LevelSystem.CalculateLevel(_habits.Sum(h => h.TotalXP)) >= 5,
+                AchievementType.Level7 => LevelSystem.CalculateLevel(_habits.Sum(h => h.TotalXP)) >= 7,
+
+                // XP
+                AchievementType.Century => _habits.Sum(h => h.TotalXP) >= 100,
+                AchievementType.HalfK => _habits.Sum(h => h.TotalXP) >= 500,
+                AchievementType.Millennium => _habits.Sum(h => h.TotalXP) >= 1000,
+
+                _ => false
+            };
+
+            if (shouldUnlock)
+            {
+                achievement.IsUnlocked = true;
+                achievement.UnlockedAt = DateTime.Now;
+                newlyUnlocked.Add(achievement);
+            }
+        }
+
+        return newlyUnlocked;
+    }
+
+    private bool CheckDiverseAchievement()
+    {
+        var categories = new[] { Category.Health, Category.Study, Category.Work, Category.Personal };
+        return categories.All(cat => _habits.Any(h => h.Category == cat));
+    }
+
+    private bool CheckCategoryMasterAchievement()
+    {
+        var categories = new[] { Category.Health, Category.Study, Category.Work, Category.Personal };
+        foreach (var category in categories)
+        {
+            int completionsInCategory = _habits
+                .Where(h => h.Category == category)
+                .Sum(h => h.CompletedDates.Count);
+
+            if (completionsInCategory >= 10)
+                return true;
+        }
+
+        return false;
+    }
+
+    public void ShowAchievements()
+    {
+        Console.WriteLine("\n╔════════════════════════════════════════════════════════════╗");
+        Console.WriteLine("║                     ACHIEVEMENTS                           ║");
+        Console.WriteLine("╚════════════════════════════════════════════════════════════╝\n");
+
+        int unlockedCount = _achievements.Count(a => a.IsUnlocked);
+        int totalCount = _achievements.Count;
+
+        Console.WriteLine($"Progress: {unlockedCount}/{totalCount} unlocked ({unlockedCount * 100 / totalCount}%)\n");
+
+        foreach (var achievement in _achievements)
+        {
+            string status = achievement.IsUnlocked ? "✅" : "🔒";
+            string unlockedDate = achievement.IsUnlocked && achievement.UnlockedAt.HasValue
+                ? $" (Unlocked: {achievement.UnlockedAt.Value:dd/MM/yyyy})"
+                : "";
+
+            Console.WriteLine($"{status} {achievement.Icon} {achievement.Name}");
+            Console.WriteLine($"   {achievement.Description}{unlockedDate}");
+            Console.WriteLine();
+        }
+    }
+}

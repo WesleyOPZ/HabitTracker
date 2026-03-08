@@ -18,53 +18,59 @@
     "Id": 2,
     "Name": "Estudar",
     "Description": "Estudar c#",
-    "CurrentStreak": 1,
-    "LongestStreak": 1,
-    "TotalXP": 50,
+    "CurrentStreak": 2,
+    "LongestStreak": 2,
+    "TotalXP": 101,
     "CreatedAt": "2026-03-07T16:43:31.3813948-03:00",
     "Difficulty": 50,
     "Category": 1,
     "CompletedDates": [
-      "2026-03-07T16:45:15.217502-03:00"
+      "2026-03-07T16:45:15.217502-03:00",
+      "2026-03-08T15:43:12.3352618-03:00"
     ]
   },
   {
     "Id": 3,
     "Name": "Ver filme",
     "Description": "Filme",
-    "CurrentStreak": 1,
-    "LongestStreak": 1,
-    "TotalXP": 50,
+    "CurrentStreak": 2,
+    "LongestStreak": 2,
+    "TotalXP": 101,
     "CreatedAt": "2026-03-07T16:47:59.1172398-03:00",
     "Difficulty": 50,
     "Category": 3,
     "CompletedDates": [
-      "2026-03-07T17:34:34.5088965-03:00"
+      "2026-03-07T17:34:34.5088965-03:00",
+      "2026-03-08T15:43:14.2450836-03:00"
     ]
   },
   {
     "Id": 4,
     "Name": "Assistir filme 1",
     "Description": "",
-    "CurrentStreak": 0,
-    "LongestStreak": 0,
-    "TotalXP": 0,
+    "CurrentStreak": 1,
+    "LongestStreak": 1,
+    "TotalXP": 20,
     "CreatedAt": "2026-03-07T17:34:00.7665007-03:00",
     "Difficulty": 20,
     "Category": 3,
-    "CompletedDates": []
+    "CompletedDates": [
+      "2026-03-08T15:43:16.0766235-03:00"
+    ]
   },
   {
     "Id": 5,
     "Name": "Assistir filme 4",
     "Description": "",
-    "CurrentStreak": 0,
-    "LongestStreak": 0,
-    "TotalXP": 0,
+    "CurrentStreak": 1,
+    "LongestStreak": 1,
+    "TotalXP": 5,
     "CreatedAt": "2026-03-07T17:34:13.8150862-03:00",
     "Difficulty": 5,
     "Category": 3,
-    "CompletedDates": []
+    "CompletedDates": [
+      "2026-03-08T15:43:18.2785801-03:00"
+    ]
   },
   {
     "Id": 6,
@@ -76,6 +82,18 @@
     "CreatedAt": "2026-03-07T17:34:26.296152-03:00",
     "Difficulty": 10,
     "Category": 3,
+    "CompletedDates": []
+  },
+  {
+    "Id": 7,
+    "Name": "New habit for achievement test",
+    "Description": "",
+    "CurrentStreak": 0,
+    "LongestStreak": 0,
+    "TotalXP": 0,
+    "CreatedAt": "2026-03-08T15:42:28.8259134-03:00",
+    "Difficulty": 20,
+    "Category": 2,
     "CompletedDates": []
   }
 ]

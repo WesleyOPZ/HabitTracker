@@ -10,14 +10,16 @@ public class HabitService
     private int _nextId;
 
     public StatisticsService Statistics { get; private set; }
-
+    public AchievementService Achievements { get; private set; }
 
     public HabitService()
     {
         _storage = new JsonStorage();
         _habits = _storage.LoadHabits();
         _nextId = _habits.Any() ? _habits.Max(h => h.Id) + 1 : 1;
+
         Statistics = new StatisticsService(_habits);
+        Achievements = new AchievementService(_habits);
     }
 
     private void DisplayHabit(Habit habit)
@@ -83,6 +85,13 @@ public class HabitService
         _storage.SaveHabits(_habits);
 
         Console.WriteLine($"\n✓ Habit '{name}' created successfully! (ID: {habit.Id})");
+
+        var newAchievements = Achievements.CheckAchievements();
+        if (newAchievements.Any())
+        {
+            Console.WriteLine(
+                $"\n🏆 Achievement unlocked: {newAchievements.First().Icon} {newAchievements.First().Name}!");
+        }
     }
 
     public void ListHabits()
@@ -152,6 +161,13 @@ public class HabitService
         {
             string levelName = LevelSystem.GetLevelName(newLevel);
             Console.WriteLine($"\n🎉 LEVEL UP! You reached level {newLevel} - {levelName}!");
+        }
+
+        var newAchievement = Achievements.CheckAchievements();
+        foreach (var achievement in newAchievement)
+        {
+            Console.WriteLine($"\n🏆 Achievement unlocked: {achievement.Icon} {achievement.Name}!");
+            Console.WriteLine($"   {achievement.Description}");
         }
     }
 

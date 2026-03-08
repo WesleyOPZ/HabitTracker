@@ -68,6 +68,7 @@ class Program
             Console.WriteLine("│  7 - Category statistics                                   │");
             Console.WriteLine("│  8 - Weekday statistics                                    │");
             Console.WriteLine("│  9 - Week activity graph                                   │");
+            Console.WriteLine("│  10 - Achievements                                         │");
             Console.WriteLine("│  99 - Delete habit                                         │");
             Console.WriteLine("│  0 - Exit                                                  │");
             Console.WriteLine("└────────────────────────────────────────────────────────────┘");
@@ -136,9 +137,13 @@ class Program
                 case "8":
                     habitService.Statistics.ShowWeekdayStatistics();
                     break;
-                
+
                 case "9":
                     habitService.Statistics.ShowWeekActivityGraph();
+                    break;
+
+                case "10":
+                    habitService.Achievements.ShowAchievements();
                     break;
 
                 case "99":
