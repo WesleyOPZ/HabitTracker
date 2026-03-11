@@ -1,6 +1,6 @@
 # 🎯 Habit Tracker
 
-A fully-featured gamified habit tracking application with progression systems, statistics, and achievements.
+A fully-featured gamified habit tracking application with progression systems, statistics, and achievements. Currently migrating from Console to Avalonia Desktop.
 
 ## ✨ Features
 
@@ -8,7 +8,7 @@ A fully-featured gamified habit tracking application with progression systems, s
 - ✅ **Habit Management** - Create, complete, and track daily habits
 - 🏷️ **Categories** - Organize habits by Health, Study, Work, or Personal
 - 📖 **History Tracking** - View detailed completion history for each habit
-- 💾 **Persistent Storage** - All data saved locally in JSON format
+- 💾 **Persistent Storage** - All data saved locally in JSON format (`AppData/Roaming/HabitTracker/`)
 
 ### Gamification Systems
 - ⭐ **XP & Levels** - Dynamic progression system (Duolingo-style formula)
@@ -33,37 +33,59 @@ A fully-featured gamified habit tracking application with progression systems, s
 
 - **Language:** C# / .NET 8
 - **Architecture:** Layered service pattern with separation of concerns
+- **UI:** Console (UTF-8) + Avalonia Desktop (MVVM)
+- **Patterns:** MVVM, Dependency Injection, Layered Architecture
 - **Data Storage:** JSON serialization
-- **UI:** Console (UTF-8 with emoji support)
 
 ## 📁 Project Structure
+
 ```
-HabitTracker/
-├── Models/
-│   ├── Habit.cs              # Core habit entity
-│   ├── Difficulty.cs         # Difficulty enum
-│   ├── Category.cs           # Category enum
-│   ├── Achievement.cs        # Achievement model
-│   └── AchievementType.cs    # Achievement types enum
-├── Services/
-│   ├── HabitService.cs       # Habit CRUD operations
-│   ├── StatisticsService.cs  # Analytics and visualizations
-│   ├── AchievementService.cs # Achievement tracking and unlocking
-│   └── LevelSystem.cs        # XP and level calculations
-├── Data/
-│   └── JsonStorage.cs        # Persistence layer
-└── Program.cs                # Console UI and menu system
+HabitTracker/ (Solution)
+├── HabitTracker/                  # Console app
+│   └── Program.cs                 # Menu and console UI
+│
+├── HabitTracker.Core/             # Class library (shared logic)
+│   ├── Models/
+│   │   ├── Habit.cs               # Core habit entity
+│   │   ├── Achievement.cs         # Achievement model
+│   │   ├── AchievementType.cs     # Achievement types enum
+│   │   ├── Category.cs            # Category enum
+│   │   ├── Difficulty.cs          # Difficulty enum
+│   │   └── CompleteHabitResult.cs # Result model for habit completion
+│   ├── Services/
+│   │   ├── HabitService.cs        # Habit CRUD operations
+│   │   ├── StatisticsService.cs   # Analytics and visualizations
+│   │   ├── AchievementService.cs  # Achievement tracking and unlocking
+│   │   └── LevelSystem.cs         # XP and level calculations (static)
+│   └── Data/
+│       └── JsonStorage.cs         # Persistence layer
+│
+└── HabitTracker.Desktop/          # Avalonia Desktop app
+    ├── ViewModels/
+    │   ├── MainWindowViewModel.cs  # Main screen logic (MVVM)
+    │   └── ViewModelBase.cs        # Base ViewModel
+    ├── Views/
+    │   ├── MainWindow.axaml        # Main screen UI
+    │   └── MainWindow.axaml.cs
+    ├── App.axaml
+    └── Program.cs
 ```
 
 ## 🚀 How to Run
+
+**Console:**
 ```bash
 cd HabitTracker
 dotnet run
 ```
 
-## 📸 Features Overview
+**Desktop:**
+```bash
+dotnet run --project HabitTracker.Desktop
+```
 
-### Menu Options
+## 📸 Console Menu Options
+
 1. Create new habit (with difficulty and category selection)
 2. List all habits (sorted by streak)
 3. Complete habit today (earn XP, check for level ups and achievements)
@@ -76,13 +98,16 @@ dotnet run
 10. View all achievements
 99. Delete habit
 
-### Level Progression Formula
+## 📐 Level Progression Formula
+
 Dynamic XP requirements using Duolingo-style progression:
+
 ```
 XP for level N = N² × 50 + N × 50
 ```
 
-### Achievement Categories
+## 🏆 Achievement Categories
+
 - **Beginner** (3) - First habit, first completion, 5 total completions
 - **Consistency** (3) - Streaks of 7, 30, and 100 days
 - **Explorer** (2) - Diverse habits across categories, category mastery
@@ -100,24 +125,31 @@ XP for level N = N² × 50 + N × 50
 - [x] Achievement system with 14 badges
 
 ### 🔄 Phase 2: Desktop Application (IN PROGRESS)
-- [ ] Migrate to WPF/Avalonia
-- [ ] Modern UI with visual statistics
-- [ ] Interactive charts and graphs
-- [ ] System tray integration
-- [ ] Enhanced achievement visuals
+- [x] Migrate Models/Services/Data to shared Core library
+- [x] Avalonia Desktop project setup
+- [x] Main window with habit list
+- [x] Level and XP header with progress bar
+- [x] Complete habit button with live update
+- [x] Persistent JSON storage shared between Console and Desktop
+- [ ] Popups (already completed today, level up, achievement unlocked)
+- [ ] Create habit screen
+- [ ] Delete habit
+- [ ] Habit history screen
+- [ ] Statistics screens
+- [ ] Achievements screen
+- [ ] Filter by category
 
 ### 🔮 Phase 3: Advanced Features
 - [ ] Notifications and reminders
 - [ ] SQLite database migration
 - [ ] Data export/import
-- [ ] Backup and sync capabilities
 - [ ] Custom themes
 
 ### 🌟 Phase 4: Future Enhancements
-- [ ] Cross-platform mobile app
+- [ ] Cross-platform mobile app (Avalonia)
+- [ ] Integration with FocusHour (study time monitoring)
 - [ ] Cloud synchronization
 - [ ] Social features and challenges
-- [ ] Integration with productivity tools
 
 ## 📚 Learning Journey
 
@@ -125,12 +157,13 @@ This project demonstrates:
 - **Clean Architecture** - Separation of concerns with service layers
 - **SOLID Principles** - Single Responsibility, maintainable code
 - **OOP Best Practices** - Encapsulation, proper use of enums and models
-- **Console UI Design** - User-friendly menu system with visual formatting
+- **MVVM Pattern** - ViewModel, data binding, ObservableCollection
 - **Data Persistence** - JSON serialization for local storage
 - **Gamification Design** - Progression systems, rewards, achievements
+- **Cross-platform UI** - Avalonia for Desktop (and future Mobile)
 
 ---
 
-**Version:** 2.0 (Console Complete)  
-**Status:** Production-ready console app, beginning desktop migration  
-**Next:** WPF/Avalonia desktop implementation
+**Version:** 3.0 (Desktop in progress)
+**Status:** Console complete, Desktop with habit list working
+**Next:** Popups and interactivity for Desktop
