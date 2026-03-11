@@ -4,8 +4,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HabitTracker.Desktop", "Hab
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HabitTracker.Core", "HabitTracker.Core\HabitTracker.Core.csproj", "{160AA930-7636-4DE9-8932-872BF95D092D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HabitTracker", "HabitTracker\HabitTracker.csproj", "{F69AE395-C4EE-439E-B4C2-740F766E0737}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -40,18 +38,6 @@ Global
 		{160AA930-7636-4DE9-8932-872BF95D092D}.Release|x64.Build.0 = Release|Any CPU
 		{160AA930-7636-4DE9-8932-872BF95D092D}.Release|x86.ActiveCfg = Release|Any CPU
 		{160AA930-7636-4DE9-8932-872BF95D092D}.Release|x86.Build.0 = Release|Any CPU
-		{F69AE395-C4EE-439E-B4C2-740F766E0737}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F69AE395-C4EE-439E-B4C2-740F766E0737}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F69AE395-C4EE-439E-B4C2-740F766E0737}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{F69AE395-C4EE-439E-B4C2-740F766E0737}.Debug|x64.Build.0 = Debug|Any CPU
-		{F69AE395-C4EE-439E-B4C2-740F766E0737}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{F69AE395-C4EE-439E-B4C2-740F766E0737}.Debug|x86.Build.0 = Debug|Any CPU
-		{F69AE395-C4EE-439E-B4C2-740F766E0737}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F69AE395-C4EE-439E-B4C2-740F766E0737}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F69AE395-C4EE-439E-B4C2-740F766E0737}.Release|x64.ActiveCfg = Release|Any CPU
-		{F69AE395-C4EE-439E-B4C2-740F766E0737}.Release|x64.Build.0 = Release|Any CPU
-		{F69AE395-C4EE-439E-B4C2-740F766E0737}.Release|x86.ActiveCfg = Release|Any CPU
-		{F69AE395-C4EE-439E-B4C2-740F766E0737}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
