@@ -1,6 +1,6 @@
-using HabitTracker.Models;
+using HabitTracker.Core.Models;
 
-namespace HabitTracker.Services;
+namespace HabitTracker.Core.Services;
 
 public class AchievementService
 {
@@ -11,6 +11,7 @@ public class AchievementService
     {
         _habits = habits;
         _achievements = InitializeAchievements();
+        RecheckAllAchievements();
     }
 
     private List<Achievement> InitializeAchievements()
@@ -157,23 +158,23 @@ public class AchievementService
                 AchievementType.GettingStarted => _habits.Sum(h => h.CompletedDates.Count) >= 5,
 
                 // Consistência
-                AchievementType.Dedicated => _habits.Any(h => h.CurrentStreak >= 7),
-                AchievementType.Committed => _habits.Any(h => h.CurrentStreak >= 30),
-                AchievementType.Unstoppable => _habits.Any(h => h.CurrentStreak >= 100),
+                AchievementType.Dedicated => _habits.Any(h => h.LongestStreak >= 7),
+                AchievementType.Committed => _habits.Any(h => h.LongestStreak >= 30),
+                AchievementType.Unstoppable => _habits.Any(h => h.LongestStreak >= 100),
 
                 // Exploração
                 AchievementType.Diverse => CheckDiverseAchievement(),
                 AchievementType.CategoryMaster => CheckCategoryMasterAchievement(),
 
                 // Níveis
-                AchievementType.Level3 => LevelSystem.CalculateLevel(_habits.Sum(h => h.TotalXP)) >= 3,
-                AchievementType.Level5 => LevelSystem.CalculateLevel(_habits.Sum(h => h.TotalXP)) >= 5,
-                AchievementType.Level7 => LevelSystem.CalculateLevel(_habits.Sum(h => h.TotalXP)) >= 7,
+                AchievementType.Level3 => LevelSystem.CalculateLevel(_habits.Sum(h => h.TotalXp)) >= 3,
+                AchievementType.Level5 => LevelSystem.CalculateLevel(_habits.Sum(h => h.TotalXp)) >= 5,
+                AchievementType.Level7 => LevelSystem.CalculateLevel(_habits.Sum(h => h.TotalXp)) >= 7,
 
                 // XP
-                AchievementType.Century => _habits.Sum(h => h.TotalXP) >= 100,
-                AchievementType.HalfK => _habits.Sum(h => h.TotalXP) >= 500,
-                AchievementType.Millennium => _habits.Sum(h => h.TotalXP) >= 1000,
+                AchievementType.Century => _habits.Sum(h => h.TotalXp) >= 100,
+                AchievementType.HalfK => _habits.Sum(h => h.TotalXp) >= 500,
+                AchievementType.Millennium => _habits.Sum(h => h.TotalXp) >= 1000,
 
                 _ => false
             };
@@ -210,6 +211,38 @@ public class AchievementService
 
         return false;
     }
+
+    private void RecheckAllAchievements()
+    {
+        foreach (var achievement in _achievements)
+        {
+            bool shouldBeUnlocked = achievement.Type switch
+            {
+                AchievementType.FirstStep => _habits.Count >= 1,
+                AchievementType.Beginner => _habits.Sum(h => h.CompletedDates.Count) >= 1,
+                AchievementType.GettingStarted => _habits.Sum(h => h.CompletedDates.Count) >= 5,
+                AchievementType.Dedicated => _habits.Any(h => h.LongestStreak >= 7),
+                AchievementType.Committed => _habits.Any(h => h.LongestStreak >= 30),
+                AchievementType.Unstoppable => _habits.Any(h => h.LongestStreak >= 100),
+                AchievementType.Diverse => CheckDiverseAchievement(),
+                AchievementType.CategoryMaster => CheckCategoryMasterAchievement(),
+                AchievementType.Level3 => LevelSystem.CalculateLevel(_habits.Sum(h => h.TotalXp)) >= 3,
+                AchievementType.Level5 => LevelSystem.CalculateLevel(_habits.Sum(h => h.TotalXp)) >= 5,
+                AchievementType.Level7 => LevelSystem.CalculateLevel(_habits.Sum(h => h.TotalXp)) >= 7,
+                AchievementType.Century => _habits.Sum(h => h.TotalXp) >= 100,
+                AchievementType.HalfK => _habits.Sum(h => h.TotalXp) >= 500,
+                AchievementType.Millennium => _habits.Sum(h => h.TotalXp) >= 1000,
+                _ => false
+            };
+
+            if (shouldBeUnlocked && !achievement.IsUnlocked)
+            {
+                achievement.IsUnlocked = true;
+                achievement.UnlockedAt = DateTime.Now;
+            }
+        }
+    }
+
 
     public void ShowAchievements()
     {

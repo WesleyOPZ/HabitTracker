@@ -1,4 +1,4 @@
-namespace HabitTracker.Models;
+namespace HabitTracker.Core.Models;
 
 public enum Category
 {

@@ -1,11 +1,18 @@
 using System.Text.Json;
-using HabitTracker.Models;
+using HabitTracker.Core.Models;
 
-namespace HabitTracker.Data;
+namespace HabitTracker.Core.Data;
 
 public class JsonStorage
 {
-    private readonly string _filePath = "habits.json";
+    private readonly string _filePath;
+
+    public JsonStorage()
+    {
+        string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "HabitTracker");
+        Directory.CreateDirectory(folder);
+        _filePath = Path.Combine(folder, "habits.json");
+    }
 
     public List<Habit> LoadHabits()
     {

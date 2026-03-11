@@ -1,5 +1,5 @@
-﻿using HabitTracker.Models;
-using HabitTracker.Services;
+﻿using HabitTracker.Core.Models;
+using HabitTracker.Core.Services;
 
 namespace HabitTracker;
 
@@ -99,11 +99,18 @@ class Program
                     Console.Write("\nEnter habit ID to complete: ");
                     if (int.TryParse(Console.ReadLine(), out int completeId))
                     {
-                        habitService.CompleteHabit(completeId);
-                    }
-                    else
-                    {
-                        Console.WriteLine("\n✗ Invalid ID!");
+                        var result = habitService.CompleteHabit(completeId);
+                        if (result.AlreadyCompleted)
+                            Console.WriteLine($"\n✗ {result.Message}");
+                        else if (result.Success)
+                        {
+                            Console.WriteLine($"\n✓ Great job! +{result.XpEarned} XP");
+                            if (result.LeveledUp)
+                                Console.WriteLine(
+                                    $"🎉 LEVEL UP! Level {result.NewLevel} - {LevelSystem.GetLevelName(result.NewLevel)}!");
+                            foreach (var a in result.NewAchievements)
+                                Console.WriteLine($"🏆 Achievement unlocked: {a.Icon} {a.Name}!");
+                        }
                     }
 
                     break;

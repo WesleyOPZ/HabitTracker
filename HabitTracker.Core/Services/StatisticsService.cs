@@ -1,6 +1,6 @@
-using HabitTracker.Models;
+using HabitTracker.Core.Models;
 
-namespace HabitTracker.Services;
+namespace HabitTracker.Core.Services;
 
 public class StatisticsService
 {
@@ -28,7 +28,7 @@ public class StatisticsService
 
         int totalHabits = _habits.Count;
         int completedToday = _habits.Count(h => h.IsCompletedToday());
-        int totalXP = _habits.Sum(h => h.TotalXP);
+        int totalXP = _habits.Sum(h => h.TotalXp);
         int currentLevel = LevelSystem.CalculateLevel(totalXP);
         string levelName = LevelSystem.GetLevelName(currentLevel);
         int xpForNext = LevelSystem.GetXpForNextLevel(currentLevel);
@@ -80,7 +80,7 @@ public class StatisticsService
                 continue; // Pula categoria vazia
 
             int totalHabits = habitsInCategory.Count();
-            int totalXp = habitsInCategory.Sum(h => h.TotalXP);
+            int totalXp = habitsInCategory.Sum(h => h.TotalXp);
             int totalCompletions = habitsInCategory.Sum(h => h.CompletedDates.Count);
             int completedToday = habitsInCategory.Count(h => h.IsCompletedToday());
 

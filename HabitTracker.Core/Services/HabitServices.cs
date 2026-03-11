@@ -1,7 +1,7 @@
-using HabitTracker.Models;
-using HabitTracker.Data;
+using HabitTracker.Core.Models;
+using HabitTracker.Core.Data;
 
-namespace HabitTracker.Services;
+namespace HabitTracker.Core.Services;
 
 public class HabitService
 {
@@ -31,7 +31,7 @@ public class HabitService
         Console.WriteLine($"{status} [{habit.Id}] {habit.Name}");
         Console.WriteLine(
             $"   Category: {habit.Category} | Difficulty: {habit.Difficulty} | " +
-            $"Streak: {streak} | Best: {habit.LongestStreak} days | XP: {habit.TotalXP}");
+            $"Streak: {streak} | Best: {habit.LongestStreak} days | XP: {habit.TotalXp}");
 
         if (!string.IsNullOrEmpty(habit.Description))
         {
@@ -75,7 +75,7 @@ public class HabitService
             CreatedAt = DateTime.Now,
             CurrentStreak = 0,
             LongestStreak = 0,
-            TotalXP = 0,
+            TotalXp = 0,
             Difficulty = difficulty,
             Category = category,
             CompletedDates = new List<DateTime>()
@@ -108,67 +108,48 @@ public class HabitService
         }
     }
 
-    public void CompleteHabit(int id)
+    public CompleteHabitResult CompleteHabit (int id)
     {
         var habit = _habits.FirstOrDefault(h => h.Id == id);
 
         if (habit == null)
-        {
-            Console.WriteLine($"\n✗ Habit with ID {id} not found.");
-            return;
-        }
-
+            return new CompleteHabitResult { Success = false, Message = "Habit not Found." };
+        
         if (habit.IsCompletedToday())
-        {
-            Console.WriteLine($"\n✗ You already completed '{habit.Name}' today!");
-            return;
-        }
-
-        // Add today's completion
+            return new CompleteHabitResult{AlreadyCompleted = true, Message = $"You already completed '{habit.Name}' today!" };
+        
         habit.CompletedDates.Add(DateTime.Now);
-
-        // Calculate streak
-        var yesterday = DateTime.Today.AddDays(-1);
-        if (habit.CompletedDates.Any(d => d.Date == yesterday))
-        {
+        
+        var yesterday = DateTime.Now.AddDays(-1);
+        if (habit.CompletedDates.Any(d => d.Date == DateTime.Today.AddDays(-1)))
             habit.CurrentStreak++;
-        }
-        else
-        {
+        else 
             habit.CurrentStreak = 1;
-        }
 
-        // Update longest streak
         if (habit.CurrentStreak > habit.LongestStreak)
-        {
             habit.LongestStreak = habit.CurrentStreak;
-        }
 
-        // Award XP (base from difficulty + streak bonus)
         int xpEarned = (int)habit.Difficulty + (habit.CurrentStreak - 1);
-        habit.TotalXP += xpEarned;
-
+        habit.TotalXp += xpEarned;
+        
         _storage.SaveHabits(_habits);
+        
+        int totalXp = _habits.Sum(h => h.TotalXp);
+        int oldLevel = LevelSystem.CalculateLevel(totalXp - xpEarned);
+        int newLevel = LevelSystem.CalculateLevel(totalXp);
+        
+        var newAchievements = Achievements.CheckAchievements();
 
-        Console.WriteLine($"\nGreat job! You completed '{habit.Name}'!");
-        Console.WriteLine($"Current streak: {habit.CurrentStreak} days");
-        Console.WriteLine($"XP earned: +{xpEarned} (Total: {habit.TotalXP})");
-
-        int totalXP = _habits.Sum(h => h.TotalXP);
-        int oldLevel = LevelSystem.CalculateLevel(totalXP - xpEarned);
-        int newLevel = LevelSystem.CalculateLevel(totalXP);
-        if (newLevel > oldLevel)
+        return new CompleteHabitResult
         {
-            string levelName = LevelSystem.GetLevelName(newLevel);
-            Console.WriteLine($"\n🎉 LEVEL UP! You reached level {newLevel} - {levelName}!");
-        }
+            Success = true,
+            XpEarned = xpEarned,
+            LeveledUp = newLevel > oldLevel,
+            NewLevel = newLevel,
+            NewAchievements = newAchievements
+        };
 
-        var newAchievement = Achievements.CheckAchievements();
-        foreach (var achievement in newAchievement)
-        {
-            Console.WriteLine($"\n🏆 Achievement unlocked: {achievement.Icon} {achievement.Name}!");
-            Console.WriteLine($"   {achievement.Description}");
-        }
+
     }
 
     public void DeleteHabit(int id)
@@ -241,5 +222,15 @@ public class HabitService
         {
             DisplayHabit(habit);
         }
+    }
+
+    public List<Habit> GetHabits()
+    {
+        return _habits.OrderByDescending(h => h.CurrentStreak).ToList();
+    }
+
+    public int GetTotalXp()
+    {
+        return _habits.Sum(h => h.TotalXp);
     }
 }

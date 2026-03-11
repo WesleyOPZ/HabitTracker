@@ -1,4 +1,4 @@
-namespace HabitTracker.Services;
+namespace HabitTracker.Core.Services;
 
 public static class LevelSystem
 {

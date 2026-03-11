@@ -1,4 +1,4 @@
-namespace HabitTracker.Models;
+namespace HabitTracker.Core.Models;
 
 public class Habit
 {
@@ -7,7 +7,7 @@ public class Habit
     public string Description { get; set; } = string.Empty;
     public int CurrentStreak { get; set; }
     public int LongestStreak { get; set; }
-    public int TotalXP { get; set; }
+    public int TotalXp { get; set; }
     public DateTime CreatedAt { get; set; }
     public Difficulty Difficulty { get; set; } = Difficulty.Normal;
     public Category Category { get; set; } = Category.Personal;

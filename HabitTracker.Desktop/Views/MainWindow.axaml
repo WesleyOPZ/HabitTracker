@@ -1,0 +1,99 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:HabitTracker.Desktop.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+        x:Class="HabitTracker.Desktop.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="HabitTracker"
+        Background="#1a1a2e"
+        MinWidth="800" MinHeight="600">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <DockPanel>
+
+        <!-- Header fixo no topo -->
+        <Border DockPanel.Dock="Top" Background="#16213e" Padding="20">
+            <Grid ColumnDefinitions="*,Auto">
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="🎯 HabitTracker"
+                               FontSize="24" FontWeight="Bold"
+                               Foreground="White"/>
+                    <TextBlock Text="{Binding LevelName}"
+                               FontSize="14"
+                               Foreground="#a0a0c0"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                    <TextBlock FontSize="14" Foreground="White">
+                        <Run Text="Level "/>
+                        <Run Text="{Binding Level}" FontWeight="Bold"/>
+                    </TextBlock>
+                    <TextBlock FontSize="12" Foreground="#a0a0c0">
+                        <Run Text="{Binding XpInCurrentLevel}"/>
+                        <Run Text=" / "/>
+                        <Run Text="{Binding XpForNextLevel}"/>
+                        <Run Text=" XP"/>
+                    </TextBlock>
+                    <ProgressBar Minimum="0"
+                                 Maximum="{Binding XpForNextLevel}"
+                                 Value="{Binding XpInCurrentLevel}"
+                                 Width="150" Height="8"
+                                 Margin="0,4,0,0"
+                                 Foreground="#e94560"
+                                 Background="#0f3460"/>
+                </StackPanel>
+
+            </Grid>
+        </Border>
+
+        <!-- Lista com scroll ocupando o resto da janela -->
+        <ScrollViewer>
+            <ItemsControl ItemsSource="{Binding Habits}" Margin="20">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="#16213e"
+                                CornerRadius="8"
+                                Padding="16"
+                                Margin="0,0,0,12">
+                            <Grid ColumnDefinitions="*,Auto">
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="{Binding Name}"
+                                               FontSize="16" FontWeight="Bold"
+                                               Foreground="White"/>
+                                    <TextBlock FontSize="12" Foreground="#a0a0c0" Margin="0,4,0,0">
+                                        <Run Text="{Binding Category}"/>
+                                        <Run Text=" · "/>
+                                        <Run Text="{Binding Difficulty}"/>
+                                        <Run Text=" · 🔥 "/>
+                                        <Run Text="{Binding CurrentStreak}"/>
+                                        <Run Text=" days · ⭐ "/>
+                                        <Run Text="{Binding TotalXp}"/>
+                                        <Run Text=" XP"/>
+                                    </TextBlock>
+                                </StackPanel>
+
+                                <Button Grid.Column="1"
+                                        Content="✓ Done"
+                                        Command="{Binding $parent[Window].DataContext.CompleteHabitCommand}"
+                                        CommandParameter="{Binding}"
+                                        Background="#e94560"
+                                        Foreground="White"
+                                        CornerRadius="6"
+                                        Padding="12,8"/>
+
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+    </DockPanel>
+</Window>
