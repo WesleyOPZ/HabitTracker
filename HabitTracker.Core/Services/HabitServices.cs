@@ -71,7 +71,7 @@ public class HabitService
         
         habit.CompletedDates.Add(DateTime.Now);
         
-        var yesterday = DateTime.Now.AddDays(-1);
+        var yesterday = DateTime.Today.AddDays(-1);
         if (habit.CompletedDates.Any(d => d.Date == yesterday))
             habit.CurrentStreak++;
         else 

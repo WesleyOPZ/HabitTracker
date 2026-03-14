@@ -1,8 +1,11 @@
 ﻿using System.Collections.ObjectModel;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HabitTracker.Core.Models;
 using HabitTracker.Core.Services;
+using MsBox.Avalonia;
+using MsBox.Avalonia.Enums;
 
 namespace HabitTracker.Desktop.ViewModels;
 
@@ -31,7 +34,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             Habits.Add(habit);
         }
-        
+
         int totalXp = _habitService.GetTotalXp();
         Level = LevelSystem.CalculateLevel(totalXp);
         LevelName = LevelSystem.GetLevelName(Level);
@@ -41,9 +44,37 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void CompleteHabit(Habit habit)
+    private async Task CompleteHabit(Habit habit)
     {
-        _habitService.CompleteHabit(habit.Id);
+        var result = _habitService.CompleteHabit(habit.Id);
         LoadHabits();
+
+        if (result.AlreadyCompleted)
+        {
+            var box = MessageBoxManager.GetMessageBoxStandard(
+                "Already Done!",
+                $"'{habit.Name}' already completed today!",
+                ButtonEnum.Ok);
+            await box.ShowAsync();
+            return;
+        }
+
+        if (result.LeveledUp)
+        {
+            var box = MessageBoxManager.GetMessageBoxStandard(
+                "🎉 Level Up!",
+                $"You reached Level {result.NewLevel} - {LevelSystem.GetLevelName(result.NewLevel)}!",
+                ButtonEnum.Ok);
+            await box.ShowAsync();
+        }
+
+        foreach (var achievement in result.NewAchievements)
+        {
+            var box = MessageBoxManager.GetMessageBoxStandard(
+                "🏆 Achievement Unlocked!",
+                $"{achievement.Icon} {achievement.Name}\n{achievement.Description}",
+                ButtonEnum.Ok);
+            await box.ShowAsync();
+        }
     }
 }
