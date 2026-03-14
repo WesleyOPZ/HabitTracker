@@ -1,9 +1,12 @@
 ﻿using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HabitTracker.Core.Models;
 using HabitTracker.Core.Services;
+using HabitTracker.Desktop.Views;
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
 
@@ -75,6 +78,26 @@ public partial class MainWindowViewModel : ViewModelBase
                 $"{achievement.Icon} {achievement.Name}\n{achievement.Description}",
                 ButtonEnum.Ok);
             await box.ShowAsync();
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenCreateHabit()
+    {
+        var mainWindow = (Application.Current?.ApplicationLifetime
+            as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+
+        if (mainWindow == null) return;
+
+        var viewModel = new CreateHabitViewModel();
+        var dialog = new CreateHabitDialog { DataContext = viewModel };
+
+        await dialog.ShowDialog(mainWindow);
+
+        if (viewModel.Confirmed)
+        {
+            _habitService.CreateHabit(viewModel.Name, viewModel.Description, viewModel.Difficulty, viewModel.Category);
+            LoadHabits();
         }
     }
 }

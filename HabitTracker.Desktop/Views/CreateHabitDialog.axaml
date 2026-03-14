@@ -1,0 +1,45 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:HabitTracker.Desktop.ViewModels"
+        x:Class="HabitTracker.Desktop.Views.CreateHabitDialog"
+        x:DataType="vm:CreateHabitViewModel"
+        Title="Create Habit"
+        Width="400" Height="365"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+    <ScrollViewer>
+
+        <StackPanel Margin="24" Spacing="12">
+
+            <TextBlock Text="Habit Name" Foreground="White" />
+            <TextBox Text="{Binding Name}" Watermark="Ex: Exercise, Read, Meditate..." />
+
+            <TextBlock Text="Description (optional)" Foreground="White" />
+            <TextBox Text="{Binding Description}" Watermark="Ex: 30 minutes of running" />
+
+            <TextBlock Text="Difficulty" Foreground="White" />
+            <ComboBox ItemsSource="{Binding Difficulties}"
+                      SelectedItem="{Binding Difficulty}"
+                      HorizontalAlignment="Stretch" />
+
+            <TextBlock Text="Category" Foreground="White" />
+            <ComboBox ItemsSource="{Binding Categories}"
+                      SelectedItem="{Binding Category}"
+                      HorizontalAlignment="Stretch" />
+
+            <Button Content="Create"
+                    Command="{Binding ConfirmCommand}"
+                    HorizontalAlignment="Stretch"
+                    Margin="0,8,0,0" />
+
+
+            <Button Content="Cancel"
+                    Command="{Binding CancelCommand}"
+                    HorizontalAlignment="Stretch"
+                    Background="Transparent"
+                    Foreground="#a0a0c0" />
+
+        </StackPanel>
+    </ScrollViewer>
+
+</Window>

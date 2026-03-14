@@ -29,4 +29,10 @@
   <ItemGroup>
     <ProjectReference Include="..\HabitTracker.Core\HabitTracker.Core.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Views\CreateHabitDialog.axaml.cs">
+      <DependentUpon>MainWindow.axaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
 </Project>
