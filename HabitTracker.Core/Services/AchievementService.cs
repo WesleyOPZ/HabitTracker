@@ -150,36 +150,7 @@ public class AchievementService
         // Checa cada conquista
         foreach (var achievement in _achievements.Where(a => !a.IsUnlocked))
         {
-            bool shouldUnlock = achievement.Type switch
-            {
-                // Iniciante
-                AchievementType.FirstStep => _habits.Count >= 1,
-                AchievementType.Beginner => _habits.Sum(h => h.CompletedDates.Count) >= 1,
-                AchievementType.GettingStarted => _habits.Sum(h => h.CompletedDates.Count) >= 5,
-
-                // Consistência
-                AchievementType.Dedicated => _habits.Any(h => h.LongestStreak >= 7),
-                AchievementType.Committed => _habits.Any(h => h.LongestStreak >= 30),
-                AchievementType.Unstoppable => _habits.Any(h => h.LongestStreak >= 100),
-
-                // Exploração
-                AchievementType.Diverse => CheckDiverseAchievement(),
-                AchievementType.CategoryMaster => CheckCategoryMasterAchievement(),
-
-                // Níveis
-                AchievementType.Level3 => LevelSystem.CalculateLevel(_habits.Sum(h => h.TotalXp)) >= 3,
-                AchievementType.Level5 => LevelSystem.CalculateLevel(_habits.Sum(h => h.TotalXp)) >= 5,
-                AchievementType.Level7 => LevelSystem.CalculateLevel(_habits.Sum(h => h.TotalXp)) >= 7,
-
-                // XP
-                AchievementType.Century => _habits.Sum(h => h.TotalXp) >= 100,
-                AchievementType.HalfK => _habits.Sum(h => h.TotalXp) >= 500,
-                AchievementType.Millennium => _habits.Sum(h => h.TotalXp) >= 1000,
-
-                _ => false
-            };
-
-            if (shouldUnlock)
+            if (ShouldUnlockAchievements(achievement))
             {
                 achievement.IsUnlocked = true;
                 achievement.UnlockedAt = DateTime.Now;
@@ -216,26 +187,7 @@ public class AchievementService
     {
         foreach (var achievement in _achievements)
         {
-            bool shouldBeUnlocked = achievement.Type switch
-            {
-                AchievementType.FirstStep => _habits.Count >= 1,
-                AchievementType.Beginner => _habits.Sum(h => h.CompletedDates.Count) >= 1,
-                AchievementType.GettingStarted => _habits.Sum(h => h.CompletedDates.Count) >= 5,
-                AchievementType.Dedicated => _habits.Any(h => h.LongestStreak >= 7),
-                AchievementType.Committed => _habits.Any(h => h.LongestStreak >= 30),
-                AchievementType.Unstoppable => _habits.Any(h => h.LongestStreak >= 100),
-                AchievementType.Diverse => CheckDiverseAchievement(),
-                AchievementType.CategoryMaster => CheckCategoryMasterAchievement(),
-                AchievementType.Level3 => LevelSystem.CalculateLevel(_habits.Sum(h => h.TotalXp)) >= 3,
-                AchievementType.Level5 => LevelSystem.CalculateLevel(_habits.Sum(h => h.TotalXp)) >= 5,
-                AchievementType.Level7 => LevelSystem.CalculateLevel(_habits.Sum(h => h.TotalXp)) >= 7,
-                AchievementType.Century => _habits.Sum(h => h.TotalXp) >= 100,
-                AchievementType.HalfK => _habits.Sum(h => h.TotalXp) >= 500,
-                AchievementType.Millennium => _habits.Sum(h => h.TotalXp) >= 1000,
-                _ => false
-            };
-
-            if (shouldBeUnlocked && !achievement.IsUnlocked)
+            if (ShouldUnlockAchievements(achievement) && !achievement.IsUnlocked)
             {
                 achievement.IsUnlocked = true;
                 achievement.UnlockedAt = DateTime.Now;
@@ -243,28 +195,25 @@ public class AchievementService
         }
     }
 
-
-    public void ShowAchievements()
+    private bool ShouldUnlockAchievements(Achievement achievement)
     {
-        Console.WriteLine("\n╔════════════════════════════════════════════════════════════╗");
-        Console.WriteLine("║                     ACHIEVEMENTS                           ║");
-        Console.WriteLine("╚════════════════════════════════════════════════════════════╝\n");
-
-        int unlockedCount = _achievements.Count(a => a.IsUnlocked);
-        int totalCount = _achievements.Count;
-
-        Console.WriteLine($"Progress: {unlockedCount}/{totalCount} unlocked ({unlockedCount * 100 / totalCount}%)\n");
-
-        foreach (var achievement in _achievements)
+        return achievement.Type switch
         {
-            string status = achievement.IsUnlocked ? "✅" : "🔒";
-            string unlockedDate = achievement.IsUnlocked && achievement.UnlockedAt.HasValue
-                ? $" (Unlocked: {achievement.UnlockedAt.Value:dd/MM/yyyy})"
-                : "";
-
-            Console.WriteLine($"{status} {achievement.Icon} {achievement.Name}");
-            Console.WriteLine($"   {achievement.Description}{unlockedDate}");
-            Console.WriteLine();
-        }
+            AchievementType.FirstStep => _habits.Count >= 1,
+            AchievementType.Beginner => _habits.Sum(h => h.CompletedDates.Count) >= 1,
+            AchievementType.GettingStarted => _habits.Sum(h => h.CompletedDates.Count) >= 5,
+            AchievementType.Dedicated => _habits.Any(h => h.LongestStreak >= 7),
+            AchievementType.Committed => _habits.Any(h => h.LongestStreak >= 30),
+            AchievementType.Unstoppable => _habits.Any(h => h.LongestStreak >= 100),
+            AchievementType.Diverse => CheckDiverseAchievement(),
+            AchievementType.CategoryMaster => CheckCategoryMasterAchievement(),
+            AchievementType.Level3 => LevelSystem.CalculateLevel(_habits.Sum(h => h.TotalXp)) >= 3,
+            AchievementType.Level5 => LevelSystem.CalculateLevel(_habits.Sum(h => h.TotalXp)) >= 5,
+            AchievementType.Level7 => LevelSystem.CalculateLevel(_habits.Sum(h => h.TotalXp)) >= 7,
+            AchievementType.Century => _habits.Sum(h => h.TotalXp) >= 100,
+            AchievementType.HalfK => _habits.Sum(h => h.TotalXp) >= 500,
+            AchievementType.Millennium => _habits.Sum(h => h.TotalXp) >= 1000,
+            _ => false
+        };
     }
 }
