@@ -100,4 +100,21 @@ public partial class MainWindowViewModel : ViewModelBase
             LoadHabits();
         }
     }
+
+    [RelayCommand]
+    private async Task DeleteHabit(Habit habit)
+    {
+        var box = MessageBoxManager.GetMessageBoxStandard(
+            "Delete Habit",
+            $"Are you sure you want to delete '{habit.Name}'?",
+            ButtonEnum.YesNo);
+        
+        var result = await box.ShowAsync();
+
+        if (result == ButtonResult.Yes)
+        {
+            _habitService.DeleteHabit(habit.Id);
+            LoadHabits();
+        }
+    }
 }

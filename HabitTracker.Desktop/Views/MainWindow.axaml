@@ -73,7 +73,8 @@
                                 CornerRadius="8"
                                 Padding="16"
                                 Margin="0,0,0,12">
-                            <Grid ColumnDefinitions="*,Auto">
+                            
+                            <Grid ColumnDefinitions="*,Auto,Auto">
 
                                 <StackPanel Grid.Column="0">
                                     <TextBlock Text="{Binding Name}"
@@ -96,6 +97,15 @@
                                         Command="{ReflectionBinding $parent[Window].DataContext.CompleteHabitCommand}"
                                         CommandParameter="{Binding}"
                                         Background="#e94560"
+                                        Foreground="White"
+                                        CornerRadius="6"
+                                        Padding="12,8" />
+
+                                <Button Grid.Column="2"
+                                        Content="🗑 Delete"
+                                        Command="{ReflectionBinding $parent[Window].DataContext.DeleteHabitCommand}"
+                                        CommandParameter="{Binding}"
+                                        Background="#444466"
                                         Foreground="White"
                                         CornerRadius="6"
                                         Padding="12,8" />
