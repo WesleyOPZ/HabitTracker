@@ -8,18 +8,21 @@ public class HabitService
     private List<Habit> _habits;
     private readonly JsonStorage _storage;
     private int _nextId;
-
+    private UserProfile _profile;
+    
     public StatisticsService Statistics { get; private set; }
     public AchievementService Achievements { get; private set; }
+    public UserProfile GetProfile() => _profile;
 
     public HabitService()
     {
         _storage = new JsonStorage();
         _habits = _storage.LoadHabits();
         _nextId = _habits.Any() ? _habits.Max(h => h.Id) + 1 : 1;
+        _profile = _storage.LoadUserProfile();
 
-        Statistics = new StatisticsService(_habits);
-        Achievements = new AchievementService(_habits);
+        Statistics = new StatisticsService(_habits, _profile);
+        Achievements = new AchievementService(_habits, _profile);
     }
 
     public void CreateHabit(string name, string description = "", Difficulty difficulty = Difficulty.Normal,
@@ -80,13 +83,18 @@ public class HabitService
 
         if (habit.CurrentStreak > habit.LongestStreak)
             habit.LongestStreak = habit.CurrentStreak;
+        
+        if (habit.LongestStreak > _profile.GlobalLongestStreak)
+            _profile.GlobalLongestStreak = habit.LongestStreak;
 
         int xpEarned = (int)habit.Difficulty + (habit.CurrentStreak - 1);
         habit.TotalXp += xpEarned;
+        _profile.TotalXp += xpEarned;
 
         _storage.SaveHabits(_habits);
+        _storage.SaveProfile(_profile);
 
-        int totalXp = _habits.Sum(h => h.TotalXp);
+        int totalXp = _profile.TotalXp;
         int oldLevel = LevelSystem.CalculateLevel(totalXp - xpEarned);
         int newLevel = LevelSystem.CalculateLevel(totalXp);
 
@@ -108,11 +116,11 @@ public class HabitService
 
         if (habit == null)
             return new DeleteHabitResult { Success = false, Message = "Habit not Found." };
-        
+
 
         _habits.Remove(habit);
         _storage.SaveHabits(_habits);
-        return new DeleteHabitResult {  Success = true, Message = $"Habit '{habit.Name}' Deleted." };
+        return new DeleteHabitResult { Success = true, Message = $"Habit '{habit.Name}' Deleted." };
     }
 
 
@@ -123,6 +131,6 @@ public class HabitService
 
     public int GetTotalXp()
     {
-        return _habits.Sum(h => h.TotalXp);
+        return _profile.TotalXp;
     }
 }

@@ -5,16 +5,18 @@ namespace HabitTracker.Core.Services;
 public class StatisticsService
 {
     private readonly List<Habit> _habits;
+    private readonly UserProfile _profile;
 
-    public StatisticsService(List<Habit> habits)
+    public StatisticsService(List<Habit> habits, UserProfile profile)
     {
         _habits = habits;
+        _profile =  profile;
     }
 
     public StatisticsResult GetStatistics()
     {
         int completedToday = _habits.Count(h => h.IsCompletedToday());
-        int totalXp = _habits.Sum(h => h.TotalXp);
+        int totalXp = _profile.TotalXp;
         int currentLevel = LevelSystem.CalculateLevel(totalXp);
         string levelName = LevelSystem.GetLevelName(currentLevel);
         int xpForNext = LevelSystem.GetXpForNextLevel(currentLevel);

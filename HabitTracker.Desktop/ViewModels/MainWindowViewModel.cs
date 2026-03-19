@@ -38,7 +38,7 @@ public partial class MainWindowViewModel : ViewModelBase
             Habits.Add(habit);
         }
 
-        int totalXp = _habitService.GetTotalXp();
+        int totalXp = _habitService.GetProfile().TotalXp;
         Level = LevelSystem.CalculateLevel(totalXp);
         LevelName = LevelSystem.GetLevelName(Level);
         CurrentXp = totalXp;

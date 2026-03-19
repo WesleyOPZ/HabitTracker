@@ -6,10 +6,12 @@ public class AchievementService
 {
     private List<Achievement> _achievements;
     private readonly List<Habit> _habits;
+    private readonly UserProfile _profile;
 
-    public AchievementService(List<Habit> habits)
+    public AchievementService(List<Habit> habits, UserProfile profile)
     {
         _habits = habits;
+        _profile = profile;
         _achievements = InitializeAchievements();
         RecheckAllAchievements();
     }
@@ -207,12 +209,12 @@ public class AchievementService
             AchievementType.Unstoppable => _habits.Any(h => h.LongestStreak >= 100),
             AchievementType.Diverse => CheckDiverseAchievement(),
             AchievementType.CategoryMaster => CheckCategoryMasterAchievement(),
-            AchievementType.Level3 => LevelSystem.CalculateLevel(_habits.Sum(h => h.TotalXp)) >= 3,
-            AchievementType.Level5 => LevelSystem.CalculateLevel(_habits.Sum(h => h.TotalXp)) >= 5,
-            AchievementType.Level7 => LevelSystem.CalculateLevel(_habits.Sum(h => h.TotalXp)) >= 7,
-            AchievementType.Century => _habits.Sum(h => h.TotalXp) >= 100,
-            AchievementType.HalfK => _habits.Sum(h => h.TotalXp) >= 500,
-            AchievementType.Millennium => _habits.Sum(h => h.TotalXp) >= 1000,
+            AchievementType.Level3 => LevelSystem.CalculateLevel(_profile.TotalXp) >= 3,
+            AchievementType.Level5 => LevelSystem.CalculateLevel(_profile.TotalXp) >= 5,
+            AchievementType.Level7 => LevelSystem.CalculateLevel(_profile.TotalXp) >= 7,
+            AchievementType.Century => _profile.TotalXp >= 100,
+            AchievementType.HalfK => _profile.TotalXp >= 500,
+            AchievementType.Millennium => _profile.TotalXp >= 1000,
             _ => false
         };
     }
