@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -24,6 +25,9 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private int _currentXp;
     [ObservableProperty] private int _xpInCurrentLevel;
     [ObservableProperty] private int _xpForNextLevel;
+    [ObservableProperty] private Category? _selectedCategory;
+
+    private List<Habit> _allHabits = new();
 
     public MainWindowViewModel()
     {
@@ -33,11 +37,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void LoadHabits()
     {
-        Habits.Clear();
-        foreach (var habit in _habitService.GetHabits())
-        {
-            Habits.Add(habit);
-        }
+        _allHabits = _habitService.GetHabits();
+        ApplyFilter();
 
         int totalXp = _habitService.GetProfile().TotalXp;
         Level = LevelSystem.CalculateLevel(totalXp);
@@ -136,6 +137,34 @@ public partial class MainWindowViewModel : ViewModelBase
                 $"{achievement.Icon} {achievement.Name}\n{achievement.Description}",
                 ButtonEnum.Ok);
             await box.ShowAsync();
+        }
+    }
+
+    public List<Category?> Categories { get; } = new()
+    {
+        null,
+        Category.Health,
+        Category.Study,
+        Category.Work,
+        Category.Personal
+    };
+
+    partial void OnSelectedCategoryChanged(Category? value)
+    {
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        Habits.Clear();
+
+        var filtered = SelectedCategory == null
+            ? _allHabits
+            : _allHabits.Where(h => h.Category == SelectedCategory);
+
+        foreach (var habit in filtered)
+        {
+            Habits.Add(habit);
         }
     }
 }
