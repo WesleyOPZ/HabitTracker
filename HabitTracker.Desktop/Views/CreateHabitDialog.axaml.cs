@@ -1,5 +1,4 @@
 using Avalonia.Controls;
-using HabitTracker.Desktop.ViewModels;
 
 namespace HabitTracker.Desktop.Views;
 

@@ -1,0 +1,36 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:models="using:HabitTracker.Core.Models"
+        x:Class="HabitTracker.Desktop.Views.HabitHistoryDialog"
+        x:DataType="models:Habit"
+        Title="Habit History"
+        Width="400" Height="450"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+
+    <ScrollViewer>
+        <StackPanel Margin="24" Spacing="12">
+            <TextBlock Text="{Binding Name}"
+                          FontSize="20" FontWeight="Bold"
+                          Foreground="White"/>
+
+            <TextBlock FontSize="12" Foreground="#a0a0c0">
+                <Run Text="Total completions: "/>
+                <Run Text="{Binding CompletedDates.Count}"/>
+            </TextBlock>
+
+            <Separator Margin="0,8"/>
+
+            <ItemsControl ItemsSource="{Binding CompletedDates}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding StringFormat='✓ {0:dd/MM/yyyy HH:mm}'}"
+                                   Foreground="White"
+                                   Margin="0,4"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+
+</Window>

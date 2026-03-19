@@ -40,8 +40,7 @@
                         Margin="0,0,16,0"
                         VerticalAlignment="Center" />
 
-
-                <StackPanel Grid.Column="2" HorizontalAlignment="Right">
+                <StackPanel Grid.Column="3" HorizontalAlignment="Right">
                     <TextBlock FontSize="14" Foreground="White">
                         <Run Text="Level " />
                         <Run Text="{Binding Level}" FontWeight="Bold" />
@@ -73,8 +72,8 @@
                                 CornerRadius="8"
                                 Padding="16"
                                 Margin="0,0,0,12">
-                            
-                            <Grid ColumnDefinitions="*,Auto,Auto">
+
+                            <Grid ColumnDefinitions="*,Auto,Auto,Auto">
 
                                 <StackPanel Grid.Column="0">
                                     <TextBlock Text="{Binding Name}"
@@ -91,8 +90,18 @@
                                         <Run Text=" XP" />
                                     </TextBlock>
                                 </StackPanel>
-
+                                
                                 <Button Grid.Column="1"
+                                        Content="📋 History"
+                                        Command="{ReflectionBinding $parent[Window].DataContext.OpenHabitHistoryCommand}"
+                                        CommandParameter="{Binding .}"
+                                        Background="#0f3460"
+                                        Foreground="White"
+                                        CornerRadius="6"
+                                        Padding="12,8"
+                                        Margin="0,0,8,0" />
+
+                                <Button Grid.Column="2"
                                         Content="✓ Done"
                                         Command="{ReflectionBinding $parent[Window].DataContext.CompleteHabitCommand}"
                                         CommandParameter="{Binding}"
@@ -101,7 +110,7 @@
                                         CornerRadius="6"
                                         Padding="12,8" />
 
-                                <Button Grid.Column="2"
+                                <Button Grid.Column="3"
                                         Content="🗑 Delete"
                                         Command="{ReflectionBinding $parent[Window].DataContext.DeleteHabitCommand}"
                                         CommandParameter="{Binding}"

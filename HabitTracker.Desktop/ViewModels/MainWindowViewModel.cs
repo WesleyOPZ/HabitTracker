@@ -116,6 +116,18 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand]
+    private async Task OpenHabitHistory(Habit habit)
+    {
+        var mainWindow = (Application.Current?.ApplicationLifetime
+            as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+
+        if (mainWindow == null) return;
+
+        var dialog = new HabitHistoryDialog(habit);
+        await dialog.ShowDialog(mainWindow);
+    }
+
     private async Task ShowAchievementPopups(List<Achievement> achievements)
     {
         foreach (var achievement in achievements)

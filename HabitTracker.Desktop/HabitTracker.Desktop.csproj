@@ -34,5 +34,9 @@
     <Compile Update="Views\CreateHabitDialog.axaml.cs">
       <DependentUpon>MainWindow.axaml</DependentUpon>
     </Compile>
+    <Compile Update="Views\HabitHistoryDialog.axaml.cs">
+      <SubType>Code</SubType>
+      <DependentUpon>HabitHistoryDialog.axaml</DependentUpon>
+    </Compile>
   </ItemGroup>
 </Project>
