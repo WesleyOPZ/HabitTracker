@@ -9,7 +9,7 @@ public class HabitService
     private readonly JsonStorage _storage;
     private int _nextId;
     private UserProfile _profile;
-    
+
     public StatisticsService Statistics { get; private set; }
     public AchievementService Achievements { get; private set; }
     public UserProfile GetProfile() => _profile;
@@ -25,13 +25,13 @@ public class HabitService
         Achievements = new AchievementService(_habits, _profile);
     }
 
-    public void CreateHabit(string name, string description = "", Difficulty difficulty = Difficulty.Normal,
+    public CreateHabitResult CreateHabit(string name, string description = "",
+        Difficulty difficulty = Difficulty.Normal,
         Category category = Category.Personal)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
-            Console.WriteLine("✗ Habit name cannot be empty!");
-            return;
+            return new CreateHabitResult { Success = false, Message = "Habit name cannot be empty!" };
         }
 
         var habit = new Habit
@@ -50,15 +50,14 @@ public class HabitService
 
         _habits.Add(habit);
         _storage.SaveHabits(_habits);
-
-        Console.WriteLine($"\n✓ Habit '{name}' created successfully! (ID: {habit.Id})");
-
         var newAchievements = Achievements.CheckAchievements();
-        if (newAchievements.Any())
+
+        return new CreateHabitResult
         {
-            Console.WriteLine(
-                $"\n🏆 Achievement unlocked: {newAchievements.First().Icon} {newAchievements.First().Name}!");
-        }
+            Success = true,
+            Message = $"Habit '{name}' created successfully! (ID: {habit.Id}).",
+            NewAchievements = newAchievements
+        };
     }
 
 
@@ -83,7 +82,7 @@ public class HabitService
 
         if (habit.CurrentStreak > habit.LongestStreak)
             habit.LongestStreak = habit.CurrentStreak;
-        
+
         if (habit.LongestStreak > _profile.GlobalLongestStreak)
             _profile.GlobalLongestStreak = habit.LongestStreak;
 

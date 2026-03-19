@@ -1,4 +1,5 @@
-﻿using System.Collections.ObjectModel;
+﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -71,14 +72,7 @@ public partial class MainWindowViewModel : ViewModelBase
             await box.ShowAsync();
         }
 
-        foreach (var achievement in result.NewAchievements)
-        {
-            var box = MessageBoxManager.GetMessageBoxStandard(
-                "🏆 Achievement Unlocked!",
-                $"{achievement.Icon} {achievement.Name}\n{achievement.Description}",
-                ButtonEnum.Ok);
-            await box.ShowAsync();
-        }
+        await ShowAchievementPopups(result.NewAchievements);
     }
 
     [RelayCommand]
@@ -96,8 +90,12 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (viewModel.Confirmed)
         {
-            _habitService.CreateHabit(viewModel.Name, viewModel.Description, viewModel.Difficulty, viewModel.Category);
+            var result = _habitService.CreateHabit(viewModel.Name, viewModel.Description, viewModel.Difficulty,
+                viewModel.Category);
+
             LoadHabits();
+
+            await ShowAchievementPopups(result.NewAchievements);
         }
     }
 
@@ -108,13 +106,24 @@ public partial class MainWindowViewModel : ViewModelBase
             "Delete Habit",
             $"Are you sure you want to delete '{habit.Name}'?",
             ButtonEnum.YesNo);
-        
+
         var result = await box.ShowAsync();
 
         if (result == ButtonResult.Yes)
         {
             _habitService.DeleteHabit(habit.Id);
             LoadHabits();
+        }
+    }
+
+    private async Task ShowAchievementPopups(List<Achievement> achievements)
+    {
+        foreach (var achievement in achievements)
+        {
+            var box = MessageBoxManager.GetMessageBoxStandard("🏆 Achievement Unlocked!",
+                $"{achievement.Icon} {achievement.Name}\n{achievement.Description}",
+                ButtonEnum.Ok);
+            await box.ShowAsync();
         }
     }
 }
