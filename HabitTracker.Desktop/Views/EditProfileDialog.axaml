@@ -1,0 +1,77 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:HabitTracker.Desktop.ViewModels"
+        xmlns:models="using:HabitTracker.Core.Models"
+        x:Class="HabitTracker.Desktop.Views.EditProfileDialog"
+        x:DataType="vm:EditProfileViewModel"
+        Title="Edit Profile"
+        Background="#1a1a2e"
+        Width="400" Height="480"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+
+    <StackPanel Margin="24" Spacing="16">
+
+        <TextBlock Text="Edit Profile"
+                   FontSize="20" FontWeight="Bold"
+                   Foreground="White" />
+
+        <StackPanel Spacing="4">
+            <TextBlock Text="Name" Foreground="#a0a0c0" FontSize="12" />
+            <TextBox Text="{Binding UserName}"
+                     Background="#16213e"
+                     Foreground="White"
+                     CornerRadius="6"
+                     Padding="10,8" />
+        </StackPanel>
+
+        <StackPanel Spacing="4">
+            <TextBlock Text="Description" Foreground="#a0a0c0" FontSize="12" />
+            <TextBox Text="{Binding Description}"
+                     Background="#16213e"
+                     Foreground="White"
+                     CornerRadius="6"
+                     Padding="10,8"
+                     Height="80"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+
+        <StackPanel Spacing="4">
+            <TextBlock Text="Gender" Foreground="#a0a0c0" FontSize="12" />
+            <ComboBox ItemsSource="{Binding Genders}"
+                      SelectedItem="{Binding Gender}"
+                      HorizontalAlignment="Stretch"
+                      Background="#16213e"
+                      Foreground="White" />
+        </StackPanel>
+
+        <StackPanel Spacing="4">
+            <TextBlock Text="Date of Birth" Foreground="#a0a0c0" FontSize="12" />
+            <DatePicker SelectedDate="{Binding DateOfBirth}"
+                        Background="#16213e"
+                        Foreground="White" />
+        </StackPanel>
+
+        <Grid ColumnDefinitions="*,*" Margin="0,8,0,0">
+            <Button Grid.Column="0"
+                    Content="Cancel"
+                    Command="{Binding CancelCommand}"
+                    Background="#444466"
+                    Foreground="White"
+                    CornerRadius="6"
+                    HorizontalAlignment="Stretch"
+                    Padding="12,8"
+                    Margin="0,0,8,0" />
+            <Button Grid.Column="1"
+                    Content="Save"
+                    Command="{Binding ConfirmCommand}"
+                    Background="#e94560"
+                    Foreground="White"
+                    CornerRadius="6"
+                    HorizontalAlignment="Stretch"
+                    Padding="12,8" />
+        </Grid>
+
+    </StackPanel>
+</Window>

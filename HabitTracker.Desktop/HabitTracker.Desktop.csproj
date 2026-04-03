@@ -37,5 +37,8 @@
       <SubType>Code</SubType>
       <DependentUpon>HabitHistoryDialog.axaml</DependentUpon>
     </Compile>
+    <Compile Update="Views\EditProfileDialog.axaml">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
 </Project>

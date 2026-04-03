@@ -28,6 +28,12 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private int _xpForNextLevel;
     [ObservableProperty] private Category? _selectedCategory;
     [ObservableProperty] private ActiveTab _activeTab = ActiveTab.Habits;
+    [ObservableProperty] private string _profileUserName = string.Empty;
+    [ObservableProperty] private string _profileDescription = string.Empty;
+    [ObservableProperty] private string _profileGender = string.Empty;
+    [ObservableProperty] private string _profileDateOfBirth = string.Empty;
+    [ObservableProperty] private string _profileMemberSince = string.Empty;
+    [ObservableProperty] private int _globalLongestStreak;
     public ObservableCollection<Achievement> Achievements { get; } = new();
 
     private List<Habit> _allHabits = new();
@@ -52,6 +58,8 @@ public partial class MainWindowViewModel : ViewModelBase
         Achievements.Clear();
         foreach (var achievement in _habitService.Achievements.GetAllAchievements())
             Achievements.Add(achievement);
+
+        LoadProfile();
     }
 
     [RelayCommand]
@@ -149,6 +157,32 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand]
+    private async Task OpenEditProfile()
+    {
+        var mainWindow = (Application.Current?.ApplicationLifetime
+            as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+
+        if (mainWindow == null) return;
+
+        var profile = _habitService.GetProfile();
+        var viewModel = new EditProfileViewModel(profile);
+        var dialog = new EditProfileDialog(viewModel);
+
+        await dialog.ShowDialog(mainWindow);
+
+        if (viewModel.Confirmed)
+        {
+            profile.UserName = viewModel.UserName;
+            profile.Description = viewModel.Description;
+            profile.Gender = viewModel.Gender;
+            profile.DateOfBirth = viewModel.DateOfBirth?.DateTime;
+
+            _habitService.UpdateProfile(profile);
+            LoadProfile();
+        }
+    }
+
     public List<Category?> Categories { get; } = new()
     {
         null,
@@ -175,5 +209,18 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             Habits.Add(habit);
         }
+    }
+
+    private void LoadProfile()
+    {
+        var profile = _habitService.GetProfile();
+        ProfileUserName = string.IsNullOrEmpty(profile.UserName) ? "No name set" : profile.UserName;
+        ProfileDescription = string.IsNullOrEmpty(profile.Description) ? "No description set" : profile.Description;
+        ProfileGender = profile.Gender == Gender.Unknown ? "Not specified" : profile.Gender.ToString();
+        ProfileDateOfBirth = profile.DateOfBirth.HasValue
+            ? profile.DateOfBirth.Value.ToString("dd/MM/yyyy")
+            : "Not specified";
+        ProfileMemberSince = profile.DateCreated.ToString("dd/MM/yyyy");
+        GlobalLongestStreak = profile.GlobalLongestStreak;
     }
 }

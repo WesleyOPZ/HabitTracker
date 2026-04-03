@@ -52,6 +52,13 @@
                             CommandParameter="{x:Static desktopModels:ActiveTab.Achievements}"
                             Background="#0f3460"
                             Foreground="White"
+                            CornerRadius="0 0 0 0"
+                            Padding="12,8" />
+                    <Button Content="👤 Profile"
+                            Command="{ReflectionBinding ShowTabCommand}"
+                            CommandParameter="{x:Static desktopModels:ActiveTab.Profile}"
+                            Background="#0f3460"
+                            Foreground="White"
                             CornerRadius="0 6 6 0"
                             Padding="12,8" />
                 </StackPanel>
@@ -201,6 +208,104 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+            </ScrollViewer>
+            <!-- Painel de Perfil -->
+            <ScrollViewer
+                IsVisible="{Binding ActiveTab, 
+              Converter={StaticResource TabVisibilityConverter}, 
+              ConverterParameter=Profile}">
+                <StackPanel Margin="20" Spacing="16">
+
+                    <!-- Card principal -->
+                    <Border Background="#16213e" CornerRadius="8" Padding="24">
+                        <StackPanel Spacing="12">
+
+                            <!-- Placeholder foto + nome -->
+                            <StackPanel Orientation="Horizontal" Spacing="16">
+                                <Border Width="72" Height="72"
+                                        CornerRadius="36"
+                                        Background="#0f3460">
+                                    <TextBlock Text="👤"
+                                               FontSize="32"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding ProfileUserName}"
+                                               FontSize="22" FontWeight="Bold"
+                                               Foreground="White" />
+                                    <TextBlock FontSize="13" Foreground="#a0a0c0">
+                                        <Run Text="Level " />
+                                        <Run Text="{Binding Level}" FontWeight="Bold" />
+                                        <Run Text=" · " />
+                                        <Run Text="{Binding LevelName}" />
+                                    </TextBlock>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- Descrição -->
+                            <TextBlock Text="{Binding ProfileDescription}"
+                                       FontSize="13"
+                                       Foreground="#a0a0c0"
+                                       TextWrapping="Wrap" />
+
+                            <!-- Info -->
+                            <WrapPanel Orientation="Horizontal">
+                                <Border Background="#0f3460" CornerRadius="6" Padding="10,6" Margin="0,0,8,8">
+                                    <TextBlock FontSize="12" Foreground="White">
+                                        <Run Text="⚧ " />
+                                        <Run Text="{Binding ProfileGender}" />
+                                    </TextBlock>
+                                </Border>
+                                <Border Background="#0f3460" CornerRadius="6" Padding="10,6" Margin="0,0,8,8">
+                                    <TextBlock FontSize="12" Foreground="White">
+                                        <Run Text="🎂 " />
+                                        <Run Text="{Binding ProfileDateOfBirth}" />
+                                    </TextBlock>
+                                </Border>
+                                <Border Background="#0f3460" CornerRadius="6" Padding="10,6" Margin="0,0,8,8">
+                                    <TextBlock FontSize="12" Foreground="White">
+                                        <Run Text="📅 Member since " />
+                                        <Run Text="{Binding ProfileMemberSince}" />
+                                    </TextBlock>
+                                </Border>
+                            </WrapPanel>
+
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Stats rápidas -->
+                    <Border Background="#16213e" CornerRadius="8" Padding="24">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Stats" FontSize="16" FontWeight="Bold" Foreground="White" />
+                            <TextBlock FontSize="13" Foreground="#a0a0c0">
+                                <Run Text="⭐ Total XP: " />
+                                <Run Text="{Binding CurrentXp}" FontWeight="Bold" Foreground="White" />
+                            </TextBlock>
+                            <TextBlock FontSize="13" Foreground="#a0a0c0">
+                                <Run Text="🔥 Global Longest Streak: " />
+                                <Run Text="{Binding GlobalLongestStreak}" FontWeight="Bold" Foreground="White" />
+                                <Run Text=" days" />
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Botões -->
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Button Content="✏️ Edit Profile"
+                                Command="{ReflectionBinding OpenEditProfileCommand}"
+                                Background="#e94560"
+                                Foreground="White"
+                                CornerRadius="6"
+                                Padding="16,10" />
+                        <Button Content="👁 Preview"
+                                Background="#0f3460"
+                                Foreground="White"
+                                CornerRadius="6"
+                                Padding="16,10" />
+                    </StackPanel>
+
+                </StackPanel>
             </ScrollViewer>
         </Grid>
 

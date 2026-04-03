@@ -132,4 +132,10 @@ public class HabitService
     {
         return _profile.TotalXp;
     }
-}
+
+    public void UpdateProfile(UserProfile profile)
+    {
+        _profile = profile;
+        _storage.SaveProfile(_profile); 
+    }
+ }
