@@ -1,12 +1,13 @@
 # 🎯 Habit Tracker
 
-A fully-featured gamified habit tracking application with progression systems, statistics, and achievements. Currently migrating from Console to Avalonia Desktop.
+A fully-featured gamified habit tracking application with progression systems, statistics, and achievements. Built with Avalonia Desktop using MVVM architecture.
 
 ## ✨ Features
 
 ### Core Functionality
-- ✅ **Habit Management** - Create, complete, and track daily habits
+- ✅ **Habit Management** - Create, complete, and delete daily habits
 - 🏷️ **Categories** - Organize habits by Health, Study, Work, or Personal
+- 🔍 **Category Filter** - Filter habit list by category in real time
 - 📖 **History Tracking** - View detailed completion history for each habit
 - 💾 **Persistent Storage** - All data saved locally in JSON format (`AppData/Roaming/HabitTracker/`)
 
@@ -23,80 +24,71 @@ A fully-featured gamified habit tracking application with progression systems, s
   - 🎖️ Progression (reach levels 3, 5, 7)
   - ⚡ XP milestones (100, 500, 1000 total XP)
 
-### Advanced Statistics
-- 📊 **Overall Stats** - Total XP, current level, completion rates
-- 📚 **Category Breakdown** - Performance metrics per category
-- 📅 **Weekday Analysis** - Discover your best and worst days
-- 📈 **7-Day Activity Graph** - Visual ASCII chart of recent activity
+### User Profile
+- 👤 **Profile Tab** - View name, level, XP, streak, gender, date of birth and member since
+- ✏️ **Edit Profile** - Update name, description, gender and date of birth
+- 🔒 **Permanent XP** - XP is never lost when deleting a habit
 
 ## 🛠️ Technologies
 
-- **Language:** C# / .NET 8
-- **Architecture:** Layered service pattern with separation of concerns
-- **UI:** Console (UTF-8) + Avalonia Desktop (MVVM)
-- **Patterns:** MVVM, Dependency Injection, Layered Architecture
-- **Data Storage:** JSON serialization
+- **Language:** C# / .NET 8 (Core) and .NET 10 (Desktop)
+- **UI Framework:** Avalonia 11.x
+- **MVVM Toolkit:** CommunityToolkit.Mvvm 8.2.1
+- **Dialogs:** MessageBox.Avalonia 3.3.1.1
+- **Patterns:** MVVM, Layered Architecture, Result Pattern
+- **Data Storage:** JSON → SQLite (planned)
 
 ## 📁 Project Structure
 
 ```
 HabitTracker/ (Solution)
-├── HabitTracker/                  # Console app
-│   └── Program.cs                 # Menu and console UI
-│
 ├── HabitTracker.Core/             # Class library (shared logic)
 │   ├── Models/
-│   │   ├── Habit.cs               # Core habit entity
-│   │   ├── Achievement.cs         # Achievement model
-│   │   ├── AchievementType.cs     # Achievement types enum
-│   │   ├── Category.cs            # Category enum
-│   │   ├── Difficulty.cs          # Difficulty enum
-│   │   └── CompleteHabitResult.cs # Result model for habit completion
+│   │   ├── Habit.cs
+│   │   ├── Achievement.cs
+│   │   ├── AchievementType.cs
+│   │   ├── Category.cs
+│   │   ├── Difficulty.cs
+│   │   ├── Gender.cs
+│   │   ├── CompleteHabitResult.cs
+│   │   ├── DeleteHabitResult.cs
+│   │   ├── CreateHabitResult.cs
+│   │   ├── StatisticsResult.cs
+│   │   └── UserProfile.cs
 │   ├── Services/
-│   │   ├── HabitService.cs        # Habit CRUD operations
-│   │   ├── StatisticsService.cs   # Analytics and visualizations
-│   │   ├── AchievementService.cs  # Achievement tracking and unlocking
-│   │   └── LevelSystem.cs         # XP and level calculations (static)
+│   │   ├── HabitService.cs
+│   │   ├── AchievementService.cs
+│   │   ├── StatisticsService.cs
+│   │   └── LevelSystem.cs
 │   └── Data/
-│       └── JsonStorage.cs         # Persistence layer
+│       └── JsonStorage.cs
 │
 └── HabitTracker.Desktop/          # Avalonia Desktop app
+    ├── Converters/
+    │   ├── CategoryDisplayConverter.cs
+    │   ├── TabVisibilityConverter.cs
+    │   └── BoolToOpacityConverter.cs
+    ├── Models/
+    │   └── ActiveTab.cs
     ├── ViewModels/
-    │   ├── MainWindowViewModel.cs  # Main screen logic (MVVM)
-    │   └── ViewModelBase.cs        # Base ViewModel
+    │   ├── MainWindowViewModel.cs
+    │   ├── CreateHabitViewModel.cs
+    │   ├── EditProfileViewModel.cs
+    │   └── ViewModelBase.cs
     ├── Views/
-    │   ├── MainWindow.axaml        # Main screen UI
-    │   └── MainWindow.axaml.cs
+    │   ├── MainWindow.axaml
+    │   ├── CreateHabitDialog.axaml
+    │   ├── HabitHistoryDialog.axaml
+    │   └── EditProfileDialog.axaml
     ├── App.axaml
     └── Program.cs
 ```
 
 ## 🚀 How to Run
 
-**Console:**
-```bash
-cd HabitTracker
-dotnet run
-```
-
-**Desktop:**
 ```bash
 dotnet run --project HabitTracker.Desktop
 ```
-
-## 📸 Console Menu Options
-
-1. Create new habit (with difficulty and category selection)
-2. List all habits (sorted by streak)
-3. Complete habit today (earn XP, check for level ups and achievements)
-4. View habit history (last 10 completions)
-5. Show overall statistics
-6. Filter habits by category
-7. Category-specific statistics
-8. Weekday performance analysis
-9. 7-day activity graph
-10. View all achievements
-99. Delete habit
 
 ## 📐 Level Progression Formula
 
@@ -105,6 +97,17 @@ Dynamic XP requirements using Duolingo-style progression:
 ```
 XP for level N = N² × 50 + N × 50
 ```
+
+| Level | Name        | XP Required |
+|-------|-------------|-------------|
+| 1     | Beginner    | 100         |
+| 2     | Apprentice  | 300         |
+| 3     | Intermediate| 600         |
+| 4     | Advanced    | 1000        |
+| 5     | Expert      | 1500        |
+| 6     | Master      | 2100        |
+| 7     | Grandmaster | 2800        |
+| 8     | Legend      | 3600        |
 
 ## 🏆 Achievement Categories
 
@@ -121,33 +124,40 @@ XP for level N = N² × 50 + N × 50
 - [x] Difficulty and XP system
 - [x] Dynamic level progression
 - [x] Category organization
-- [x] Advanced statistics with separate service
 - [x] Achievement system with 14 badges
 
-### 🔄 Phase 2: Desktop Application (IN PROGRESS)
+### ✅ Phase 2: Core Migration (COMPLETE)
 - [x] Migrate Models/Services/Data to shared Core library
-- [x] Avalonia Desktop project setup
-- [x] Main window with habit list
-- [x] Level and XP header with progress bar
-- [x] Complete habit button with live update
-- [x] Persistent JSON storage shared between Console and Desktop
-- [ ] Popups (already completed today, level up, achievement unlocked)
-- [ ] Create habit screen
-- [ ] Delete habit
-- [ ] Habit history screen
-- [ ] Statistics screens
-- [ ] Achievements screen
-- [ ] Filter by category
+- [x] Result pattern (CreateHabitResult, CompleteHabitResult, DeleteHabitResult)
+- [x] UserProfile with persistent TotalXp
+- [x] GlobalLongestStreak tracking
+- [x] JsonStorage saving to AppData/Roaming/HabitTracker/
 
-### 🔮 Phase 3: Advanced Features
+### 🔄 Phase 3: Desktop Application (IN PROGRESS)
+- [x] Avalonia Desktop project setup with MVVM
+- [x] Main window with habit list and Level/XP/ProgressBar header
+- [x] Complete habit with XP, level up and achievement popups
+- [x] Create habit dialog (Name, Description, Difficulty, Category)
+- [x] Delete habit with confirmation
+- [x] Habit history dialog
+- [x] Category filter with nullable enum and ValueConverter
+- [x] Tab navigation system with scalable ActiveTab enum
+- [x] Achievements tab with locked/unlocked visual distinction
+- [x] Profile tab with user info and stats
+- [x] Edit profile dialog (Name, Description, Gender, Date of Birth)
+- [ ] Profile preview dialog (public card view)
+- [ ] Statistics tab
+- [ ] Refined UI/UX (custom popups, animations, themes)
+
+### 🔮 Phase 4: Advanced Features
+- [ ] Profile photo with file picker
+- [ ] Custom fonts and backgrounds in profile
+- [ ] SQLite database migration (with soft delete)
 - [ ] Notifications and reminders
-- [ ] SQLite database migration
 - [ ] Data export/import
-- [ ] Custom themes
 
-### 🌟 Phase 4: Future Enhancements
+### 🌟 Phase 5: Future Enhancements
 - [ ] Cross-platform mobile app (Avalonia)
-- [ ] Integration with FocusHour (study time monitoring)
 - [ ] Cloud synchronization
 - [ ] Social features and challenges
 
@@ -158,12 +168,13 @@ This project demonstrates:
 - **SOLID Principles** - Single Responsibility, maintainable code
 - **OOP Best Practices** - Encapsulation, proper use of enums and models
 - **MVVM Pattern** - ViewModel, data binding, ObservableCollection
+- **ValueConverters** - IValueConverter for display logic in Avalonia
 - **Data Persistence** - JSON serialization for local storage
 - **Gamification Design** - Progression systems, rewards, achievements
 - **Cross-platform UI** - Avalonia for Desktop (and future Mobile)
 
 ---
 
-**Version:** 3.0 (Desktop in progress)
-**Status:** Console complete, Desktop with habit list working
-**Next:** Popups and interactivity for Desktop
+**Version:** 4.0  
+**Status:** Desktop in active development  
+**Next:** Profile preview dialog and statistics tab
