@@ -11,6 +11,7 @@ using HabitTracker.Core.Services;
 using HabitTracker.Desktop.Views;
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
+using HabitTracker.Desktop.Models;
 
 namespace HabitTracker.Desktop.ViewModels;
 
@@ -26,6 +27,8 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private int _xpInCurrentLevel;
     [ObservableProperty] private int _xpForNextLevel;
     [ObservableProperty] private Category? _selectedCategory;
+    [ObservableProperty] private ActiveTab _activeTab = ActiveTab.Habits;
+    public ObservableCollection<Achievement> Achievements { get; } = new();
 
     private List<Habit> _allHabits = new();
 
@@ -46,6 +49,9 @@ public partial class MainWindowViewModel : ViewModelBase
         CurrentXp = totalXp;
         XpInCurrentLevel = LevelSystem.GetXpProgressInCurrentLevel(totalXp, Level);
         XpForNextLevel = LevelSystem.GetXpForNextLevel(Level);
+        Achievements.Clear();
+        foreach (var achievement in _habitService.Achievements.GetAllAchievements())
+            Achievements.Add(achievement);
     }
 
     [RelayCommand]
@@ -128,6 +134,9 @@ public partial class MainWindowViewModel : ViewModelBase
         var dialog = new HabitHistoryDialog(habit);
         await dialog.ShowDialog(mainWindow);
     }
+
+    [RelayCommand]
+    private void ShowTab(ActiveTab tab) => ActiveTab = tab;
 
     private async Task ShowAchievementPopups(List<Achievement> achievements)
     {

@@ -5,6 +5,8 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:converters="using:HabitTracker.Desktop.Converters"
+        xmlns:desktopModels="clr-namespace:HabitTracker.Desktop.Models"
+
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
         x:Class="HabitTracker.Desktop.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
@@ -18,13 +20,15 @@
 
     <Window.Resources>
         <converters:CategoryDisplayConverter x:Key="CategoryDisplayConverter" />
+        <converters:TabVisibilityConverter x:Key="TabVisibilityConverter" />
+        <converters:BoolToOpacityConverter x:Key="BoolToOpacityConverter" />
     </Window.Resources>
 
     <DockPanel>
 
         <!-- Header fixo no topo -->
         <Border DockPanel.Dock="Top" Background="#16213e" Padding="20">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
 
                 <StackPanel Grid.Column="0">
                     <TextBlock Text="🎯 HabitTracker"
@@ -35,7 +39,24 @@
                                Foreground="#a0a0c0" />
                 </StackPanel>
 
-                <Button Grid.Column="1"
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,16,0" VerticalAlignment="Center">
+                    <Button Content="📋 Habits"
+                            Command="{ReflectionBinding ShowTabCommand}"
+                            CommandParameter="{x:Static desktopModels:ActiveTab.Habits}"
+                            Background="#0f3460"
+                            Foreground="White"
+                            CornerRadius="6 0 0 6"
+                            Padding="12,8" />
+                    <Button Content="🏆 Achievements"
+                            Command="{ReflectionBinding ShowTabCommand}"
+                            CommandParameter="{x:Static desktopModels:ActiveTab.Achievements}"
+                            Background="#0f3460"
+                            Foreground="White"
+                            CornerRadius="0 6 6 0"
+                            Padding="12,8" />
+                </StackPanel>
+
+                <Button Grid.Column="2"
                         Content="+ New Habit"
                         Command="{ReflectionBinding OpenCreateHabitCommand}"
                         Background="#e94560"
@@ -45,7 +66,7 @@
                         Margin="0,0,16,0"
                         VerticalAlignment="Center" />
 
-                <ComboBox Grid.Column="2"
+                <ComboBox Grid.Column="3"
                           ItemsSource="{Binding Categories}"
                           SelectedItem="{Binding SelectedCategory}"
                           Width="130"
@@ -58,7 +79,7 @@
                     </ComboBox.ItemTemplate>
                 </ComboBox>
 
-                <StackPanel Grid.Column="3" HorizontalAlignment="Right">
+                <StackPanel Grid.Column="4" HorizontalAlignment="Right">
                     <TextBlock FontSize="14" Foreground="White">
                         <Run Text="Level " />
                         <Run Text="{Binding Level}" FontWeight="Bold" />
@@ -76,73 +97,112 @@
                                  Margin="0,4,0,0"
                                  Foreground="#e94560"
                                  Background="#0f3460" />
+
                 </StackPanel>
+
 
             </Grid>
         </Border>
 
-        <!-- Lista com scroll ocupando o resto da janela -->
-        <ScrollViewer>
-            <ItemsControl ItemsSource="{Binding Habits}" Margin="20">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="models:Habit">
-                        <Border Background="#16213e"
-                                CornerRadius="8"
-                                Padding="16"
-                                Margin="0,0,0,12">
+        <Grid>
+            <!-- Lista com scroll ocupando o resto da janela -->
+            <ScrollViewer
+                IsVisible="{Binding ActiveTab, Converter={StaticResource TabVisibilityConverter
+        }, ConverterParameter=Habits}">
+                <ItemsControl ItemsSource="{Binding Habits}" Margin="20">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="models:Habit">
+                            <Border Background="#16213e"
+                                    CornerRadius="8"
+                                    Padding="16"
+                                    Margin="0,0,0,12">
 
-                            <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                                <Grid ColumnDefinitions="*,Auto,Auto,Auto">
 
-                                <StackPanel Grid.Column="0">
-                                    <TextBlock Text="{Binding Name}"
-                                               FontSize="16" FontWeight="Bold"
-                                               Foreground="White" />
-                                    <TextBlock FontSize="12" Foreground="#a0a0c0" Margin="0,4,0,0">
-                                        <Run Text="{Binding Category}" />
-                                        <Run Text=" · " />
-                                        <Run Text="{Binding Difficulty}" />
-                                        <Run Text=" · 🔥 " />
-                                        <Run Text="{Binding CurrentStreak}" />
-                                        <Run Text=" days · ⭐ " />
-                                        <Run Text="{Binding TotalXp}" />
-                                        <Run Text=" XP" />
-                                    </TextBlock>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="{Binding Name}"
+                                                   FontSize="16" FontWeight="Bold"
+                                                   Foreground="White" />
+                                        <TextBlock FontSize="12" Foreground="#a0a0c0" Margin="0,4,0,0">
+                                            <Run Text="{Binding Category}" />
+                                            <Run Text=" · " />
+                                            <Run Text="{Binding Difficulty}" />
+                                            <Run Text=" · 🔥 " />
+                                            <Run Text="{Binding CurrentStreak}" />
+                                            <Run Text=" days · ⭐ " />
+                                            <Run Text="{Binding TotalXp}" />
+                                            <Run Text=" XP" />
+                                        </TextBlock>
+                                    </StackPanel>
+
+                                    <Button Grid.Column="1"
+                                            Content="📋 History"
+                                            Command="{ReflectionBinding $parent[Window].DataContext.OpenHabitHistoryCommand}"
+                                            CommandParameter="{Binding .}"
+                                            Background="#0f3460"
+                                            Foreground="White"
+                                            CornerRadius="6"
+                                            Padding="12,8"
+                                            Margin="0,0,8,0" />
+
+                                    <Button Grid.Column="2"
+                                            Content="✓ Done"
+                                            Command="{ReflectionBinding $parent[Window].DataContext.CompleteHabitCommand}"
+                                            CommandParameter="{Binding}"
+                                            Background="#e94560"
+                                            Foreground="White"
+                                            CornerRadius="6"
+                                            Padding="12,8" />
+
+                                    <Button Grid.Column="3"
+                                            Content="🗑 Delete"
+                                            Command="{ReflectionBinding $parent[Window].DataContext.DeleteHabitCommand}"
+                                            CommandParameter="{Binding}"
+                                            Background="#444466"
+                                            Foreground="White"
+                                            CornerRadius="6"
+                                            Padding="12,8" />
+
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+            <ScrollViewer
+                IsVisible="{Binding ActiveTab, 
+                  Converter={StaticResource TabVisibilityConverter}, 
+                  ConverterParameter=Achievements}">
+                <ItemsControl ItemsSource="{Binding Achievements}" Margin="20">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="models:Achievement">
+                            <Border Background="#16213e"
+                                    CornerRadius="8"
+                                    Padding="16"
+                                    Margin="0,0,0,12"
+                                    Opacity="{Binding IsUnlocked, 
+                                      Converter={StaticResource BoolToOpacityConverter}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Icon}"
+                                               FontSize="28"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,16,0" />
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Name}"
+                                                   FontSize="16" FontWeight="Bold"
+                                                   Foreground="White" />
+                                        <TextBlock Text="{Binding Description}"
+                                                   FontSize="12"
+                                                   Foreground="#a0a0c0"
+                                                   Margin="0,4,0,0" />
+                                    </StackPanel>
                                 </StackPanel>
-
-                                <Button Grid.Column="1"
-                                        Content="📋 History"
-                                        Command="{ReflectionBinding $parent[Window].DataContext.OpenHabitHistoryCommand}"
-                                        CommandParameter="{Binding .}"
-                                        Background="#0f3460"
-                                        Foreground="White"
-                                        CornerRadius="6"
-                                        Padding="12,8"
-                                        Margin="0,0,8,0" />
-
-                                <Button Grid.Column="2"
-                                        Content="✓ Done"
-                                        Command="{ReflectionBinding $parent[Window].DataContext.CompleteHabitCommand}"
-                                        CommandParameter="{Binding}"
-                                        Background="#e94560"
-                                        Foreground="White"
-                                        CornerRadius="6"
-                                        Padding="12,8" />
-
-                                <Button Grid.Column="3"
-                                        Content="🗑 Delete"
-                                        Command="{ReflectionBinding $parent[Window].DataContext.DeleteHabitCommand}"
-                                        CommandParameter="{Binding}"
-                                        Background="#444466"
-                                        Foreground="White"
-                                        CornerRadius="6"
-                                        Padding="12,8" />
-
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
 
     </DockPanel>
 </Window>

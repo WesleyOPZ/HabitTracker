@@ -15,6 +15,8 @@ public class AchievementService
         _achievements = InitializeAchievements();
         RecheckAllAchievements();
     }
+    
+    public List<Achievement> GetAllAchievements() => _achievements;
 
     private List<Achievement> InitializeAchievements()
     {
@@ -218,4 +220,5 @@ public class AchievementService
             _ => false
         };
     }
+    
 }
