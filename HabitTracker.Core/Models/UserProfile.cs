@@ -12,5 +12,6 @@ public class UserProfile
     public int GlobalLongestStreak { get; set; }
     public DateTime? DateOfBirth { get; set; }
     public DateTime DateCreated { get; set; }
+    public List<AchievementType> FeaturedAchievements { get; set; } = new();
 }
 

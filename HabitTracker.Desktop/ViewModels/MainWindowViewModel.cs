@@ -166,7 +166,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (mainWindow == null) return;
 
         var profile = _habitService.GetProfile();
-        var viewModel = new EditProfileViewModel(profile);
+        var viewModel = new EditProfileViewModel(profile, _habitService.Achievements.GetAllAchievements());
         var dialog = new EditProfileDialog(viewModel);
 
         await dialog.ShowDialog(mainWindow);
@@ -177,6 +177,7 @@ public partial class MainWindowViewModel : ViewModelBase
             profile.Description = viewModel.Description;
             profile.Gender = viewModel.Gender;
             profile.DateOfBirth = viewModel.DateOfBirth?.DateTime;
+            profile.FeaturedAchievements = viewModel.FeaturedAchievements;
 
             _habitService.UpdateProfile(profile);
             LoadProfile();

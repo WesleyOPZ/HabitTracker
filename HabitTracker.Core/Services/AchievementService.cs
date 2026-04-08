@@ -16,7 +16,7 @@ public class AchievementService
         RecheckAllAchievements();
     }
     
-    public List<Achievement> GetAllAchievements() => _achievements;
+    public List<Achievement> GetAllAchievements() => _achievements ?? new List<Achievement>();
 
     private List<Achievement> InitializeAchievements()
     {
