@@ -28,7 +28,7 @@
 
         <!-- Header fixo no topo -->
         <Border DockPanel.Dock="Top" Background="#16213e" Padding="20">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto">
 
                 <StackPanel Grid.Column="0">
                     <TextBlock Text="🎯 HabitTracker"
@@ -57,6 +57,13 @@
                     <Button Content="👤 Profile"
                             Command="{ReflectionBinding ShowTabCommand}"
                             CommandParameter="{x:Static desktopModels:ActiveTab.Profile}"
+                            Background="#0f3460"
+                            Foreground="White"
+                            CornerRadius="0 0 0 0"
+                            Padding="12,8" />
+                    <Button Content="📊 Statistics"
+                            Command="{ReflectionBinding ShowTabCommand}"
+                            CommandParameter="{x:Static desktopModels:ActiveTab.Statistics}"
                             Background="#0f3460"
                             Foreground="White"
                             CornerRadius="0 6 6 0"
@@ -304,6 +311,90 @@
                                 CornerRadius="6"
                                 Padding="16,10" />
                     </StackPanel>
+
+                </StackPanel>
+            </ScrollViewer>
+            <ScrollViewer
+                IsVisible="{Binding ActiveTab,
+      Converter={StaticResource TabVisibilityConverter},
+      ConverterParameter=Statistics}">
+                <StackPanel Margin="20" Spacing="16">
+
+                    <Border Background="#16213e" CornerRadius="8" Padding="24">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="📊 Overview" FontSize="18" FontWeight="Bold" Foreground="White" />
+
+                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" RowSpacing="10" ColumnSpacing="10">
+                                <Border Grid.Row="0" Grid.Column="0" Background="#0f3460" CornerRadius="6" Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="Total Habits" Foreground="#a0a0c0" FontSize="12" />
+                                        <TextBlock Text="{Binding StatTotalHabits}" Foreground="White" FontSize="20"
+                                                   FontWeight="Bold" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Grid.Row="0" Grid.Column="1" Background="#0f3460" CornerRadius="6" Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="Completed Today" Foreground="#a0a0c0" FontSize="12" />
+                                        <TextBlock Text="{Binding StatCompletedToday}" Foreground="White" FontSize="20"
+                                                   FontWeight="Bold" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Grid.Row="1" Grid.Column="0" Background="#0f3460" CornerRadius="6" Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="Total Completions" Foreground="#a0a0c0" FontSize="12" />
+                                        <TextBlock Text="{Binding StatTotalCompletions}" Foreground="White"
+                                                   FontSize="20" FontWeight="Bold" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Grid.Row="1" Grid.Column="1" Background="#0f3460" CornerRadius="6" Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="Total XP" Foreground="#a0a0c0" FontSize="12" />
+                                        <TextBlock Text="{Binding StatTotalXp}" Foreground="White" FontSize="20"
+                                                   FontWeight="Bold" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="#16213e" CornerRadius="8" Padding="24">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="📈 Level Progress" FontSize="18" FontWeight="Bold" Foreground="White" />
+                            <TextBlock FontSize="14" Foreground="#a0a0c0">
+                                <Run Text="Level " />
+                                <Run Text="{Binding StatCurrentLevel}" FontWeight="Bold" Foreground="White" />
+                                <Run Text=" · " />
+                                <Run Text="{Binding StatLevelName}" Foreground="White" />
+                            </TextBlock>
+                            <ProgressBar Minimum="0"
+                                         Maximum="{Binding StatXpForNext}"
+                                         Value="{Binding StatXpProgress}"
+                                         Height="10"
+                                         Foreground="#e94560"
+                                         Background="#0f3460" />
+                            <TextBlock FontSize="12" Foreground="#a0a0c0">
+                                <Run Text="{Binding StatXpProgress}" />
+                                <Run Text=" / " />
+                                <Run Text="{Binding StatXpForNext}" />
+                                <Run Text=" XP" />
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="#16213e" CornerRadius="8" Padding="24">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="🔥 Best Streak" FontSize="18" FontWeight="Bold" Foreground="White" />
+                            <TextBlock FontSize="14" Foreground="#a0a0c0">
+                                <Run Text="{Binding StatBestStreakName}" Foreground="White" FontWeight="Bold" />
+                                <Run Text=" — " />
+                                <Run Text="{Binding StatBestStreakDays}" Foreground="White" FontWeight="Bold" />
+                                <Run Text=" days" />
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
 
                 </StackPanel>
             </ScrollViewer>

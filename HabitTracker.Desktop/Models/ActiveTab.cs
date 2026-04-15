@@ -4,5 +4,6 @@ public enum ActiveTab
 {
     Habits,
     Achievements,
-    Profile
+    Profile,
+    Statistics
 }

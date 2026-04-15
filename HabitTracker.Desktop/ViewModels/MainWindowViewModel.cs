@@ -34,6 +34,16 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private string _profileDateOfBirth = string.Empty;
     [ObservableProperty] private string _profileMemberSince = string.Empty;
     [ObservableProperty] private int _globalLongestStreak;
+    [ObservableProperty] private int _statTotalHabits;
+    [ObservableProperty] private int _statCompletedToday;
+    [ObservableProperty] private int _statTotalXp;
+    [ObservableProperty] private int _statCurrentLevel;
+    [ObservableProperty] private string _statLevelName = string.Empty;
+    [ObservableProperty] private int _statXpForNext;
+    [ObservableProperty] private int _statXpProgress;
+    [ObservableProperty] private int _statTotalCompletions;
+    [ObservableProperty] private string _statBestStreakName = "No habits yet";
+    [ObservableProperty] private int _statBestStreakDays;
     public ObservableCollection<Achievement> Achievements { get; } = new();
 
     private List<Habit> _allHabits = new();
@@ -60,6 +70,7 @@ public partial class MainWindowViewModel : ViewModelBase
             Achievements.Add(achievement);
 
         LoadProfile();
+        LoadStatistics();
     }
 
     [RelayCommand]
@@ -223,5 +234,22 @@ public partial class MainWindowViewModel : ViewModelBase
             : "Not specified";
         ProfileMemberSince = profile.DateCreated.ToString("dd/MM/yyyy");
         GlobalLongestStreak = profile.GlobalLongestStreak;
+    }
+
+    private void LoadStatistics()
+    {
+        var stats = _habitService.Statistics.GetStatistics();
+        
+        StatTotalHabits = stats.TotalHabits;
+        StatCompletedToday = stats.CompletedToday;
+        StatTotalXp = stats.TotalXp;
+        StatCurrentLevel = stats.CurrentLevel;
+        StatLevelName = stats.LevelName;
+        StatXpForNext = stats.XpForNext;
+        StatXpProgress = stats.XpProgress;
+        StatTotalCompletions = stats.TotalCompletions;
+        
+        StatBestStreakName = stats.BestStreak?.Name ?? "No habits yet";
+        StatBestStreakDays = stats.BestStreak?.CurrentStreak ?? 0;
     }
 }
