@@ -12,6 +12,7 @@ public class Habit
     public Difficulty Difficulty { get; set; } = Difficulty.Normal;
     public Category Category { get; set; } = Category.Personal;
     public List<DateTime> CompletedDates { get; set; } = new List<DateTime>();
+    public int FolderId { get; set; }
     
     public bool IsCompletedToday()
     {

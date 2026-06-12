@@ -6,8 +6,10 @@ namespace HabitTracker.Core.Services;
 public class HabitService
 {
     private List<Habit> _habits;
+    private List<HabitFolder> _folders;
     private readonly JsonStorage _storage;
     private int _nextId;
+    private int _nextFolderId;
     private UserProfile _profile;
 
     public StatisticsService Statistics { get; private set; }
@@ -17,22 +19,79 @@ public class HabitService
     public HabitService()
     {
         _storage = new JsonStorage();
-        _habits = _storage.LoadHabits();
+        var storageData = _storage.LoadHabits();
+        _habits = storageData.Habits;
+        _folders = storageData.Folders;
+
+        if (!_folders.Any())
+        {
+            _folders.Add(new HabitFolder { Id = 1, Name = "To Do", DisplayOrder = 0, CreatedAt = DateTime.UtcNow });
+            _folders.Add(
+                new HabitFolder { Id = 2, Name = "In Progress", DisplayOrder = 1, CreatedAt = DateTime.UtcNow });
+            _folders.Add(new HabitFolder { Id = 3, Name = "Done", DisplayOrder = 2, CreatedAt = DateTime.UtcNow });
+
+
+            foreach (var habit in _habits)
+            {
+                if (habit.FolderId == 0)
+                {
+                    habit.FolderId = 1;
+                }
+            }
+
+            SaveAllData();
+        }
+
         _nextId = _habits.Any() ? _habits.Max(h => h.Id) + 1 : 1;
+        _nextFolderId = _folders.Any() ? _folders.Max(f => f.Id) + 1 : 1;
+
         _profile = _storage.LoadUserProfile();
 
         Statistics = new StatisticsService(_habits, _profile);
         Achievements = new AchievementService(_habits, _profile);
     }
 
+    private void SaveAllData()
+    {
+        _storage.SaveHabits(new HabitStorageData
+        {
+            Folders = _folders,
+            Habits = _habits
+        });
+    }
+
+    public List<HabitFolder> GetFolders()
+    {
+        return _folders.OrderBy(f => f.Name).ToList();
+    }
+
+    public void CreateFolder(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return;
+
+        var folder = new HabitFolder
+        {
+            Id = _nextFolderId++,
+            Name = name,
+            DisplayOrder = _folders.Any() ? _folders.Max(f => f.DisplayOrder) + 1 : 0,
+            CreatedAt = DateTime.UtcNow
+        };
+        _folders.Add(folder);
+        SaveAllData();
+    }
+
+
     public CreateHabitResult CreateHabit(string name, string description = "",
         Difficulty difficulty = Difficulty.Normal,
-        Category category = Category.Personal)
+        Category category = Category.Personal,
+        int? folderId = null)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
             return new CreateHabitResult { Success = false, Message = "Habit name cannot be empty!" };
         }
+        
+        int targetFolderId = folderId ?? (_folders.FirstOrDefault()?.Id ?? 1);
 
         var habit = new Habit
         {
@@ -45,11 +104,13 @@ public class HabitService
             TotalXp = 0,
             Difficulty = difficulty,
             Category = category,
-            CompletedDates = new List<DateTime>()
+            CompletedDates = new List<DateTime>(),
+            FolderId = targetFolderId
         };
 
         _habits.Add(habit);
-        _storage.SaveHabits(_habits);
+        SaveAllData();
+        
         var newAchievements = Achievements.CheckAchievements();
 
         return new CreateHabitResult
@@ -58,6 +119,16 @@ public class HabitService
             Message = $"Habit '{name}' created successfully! (ID: {habit.Id}).",
             NewAchievements = newAchievements
         };
+    }
+
+    public void MoveHabitToFolder(int habitId, int folderId)
+    {
+        var habit = _habits.FirstOrDefault(h => h.Id == habitId);
+        if (habit != null && _folders.Any(f => f.Id == folderId))
+        {
+            habit.FolderId = folderId;
+            SaveAllData();
+        }
     }
 
 
@@ -90,7 +161,7 @@ public class HabitService
         habit.TotalXp += xpEarned;
         _profile.TotalXp += xpEarned;
 
-        _storage.SaveHabits(_habits);
+        SaveAllData();
         _storage.SaveProfile(_profile);
 
         int totalXp = _profile.TotalXp;
@@ -118,7 +189,7 @@ public class HabitService
 
 
         _habits.Remove(habit);
-        _storage.SaveHabits(_habits);
+        SaveAllData();
         return new DeleteHabitResult { Success = true, Message = $"Habit '{habit.Name}' Deleted." };
     }
 
@@ -126,6 +197,11 @@ public class HabitService
     public List<Habit> GetHabits()
     {
         return _habits.OrderByDescending(h => h.CurrentStreak).ToList();
+    }
+
+    public List<Habit> GetHabitsByFolder(int folderId)
+    {
+        return _habits.Where(h => h.FolderId == folderId).OrderByDescending(h => h.CurrentStreak).ToList();
     }
 
     public int GetTotalXp()
@@ -136,6 +212,6 @@ public class HabitService
     public void UpdateProfile(UserProfile profile)
     {
         _profile = profile;
-        _storage.SaveProfile(_profile); 
+        _storage.SaveProfile(_profile);
     }
- }
+}

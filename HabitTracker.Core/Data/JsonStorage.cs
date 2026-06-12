@@ -3,6 +3,12 @@ using HabitTracker.Core.Models;
 
 namespace HabitTracker.Core.Data;
 
+public class HabitStorageData
+{
+    public List<HabitFolder> Folders { get; set; } = new();
+    public List<Habit> Habits { get; set; } = new();
+}
+
 public class JsonStorage
 {
     private readonly string _habitsFilePath;
@@ -18,28 +24,46 @@ public class JsonStorage
         _profileFilePath = Path.Combine(folder, "profile.json");
     }
 
-    public List<Habit> LoadHabits()
+    public HabitStorageData LoadHabits()
     {
         if (!File.Exists(_habitsFilePath))
         {
-            return new List<Habit>();
+            return new HabitStorageData();
         }
 
         try
         {
             string json = File.ReadAllText(_habitsFilePath);
-            return JsonSerializer.Deserialize<List<Habit>>(json) ?? new List<Habit>();
+
+            var data = JsonSerializer.Deserialize<HabitStorageData>(json);
+            if (data != null && (data.Folders.Count > 0 || data.Habits.Count > 0))
+            {
+                return data;
+            }
+
+            var legacyHabits = JsonSerializer.Deserialize<List<Habit>>(json);
+            if (legacyHabits != null)
+            {
+                return new HabitStorageData
+                {
+                    Habits = legacyHabits
+                };
+            }
+
         }
         catch
         {
-            return new List<Habit>();
+            return new HabitStorageData();
         }
+        
+        return new HabitStorageData();
     }
 
-    public void SaveHabits(List<Habit> habits)
+
+    public void SaveHabits(HabitStorageData data)
     {
         var options = new JsonSerializerOptions { WriteIndented = true };
-        string json = JsonSerializer.Serialize(habits, options);
+        string json = JsonSerializer.Serialize(data, options);
         File.WriteAllText(_habitsFilePath, json);
     }
 
