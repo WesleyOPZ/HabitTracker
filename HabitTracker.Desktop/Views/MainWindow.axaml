@@ -129,7 +129,8 @@
 
                 <StackPanel Grid.Column="0">
                     <TextBlock Text="🎯 HabitTracker"
-                               FontSize="24" FontWeight="Bold"
+                               FontSize="24"
+                               FontWeight="Bold"
                                Foreground="{StaticResource ColorTextPrimary}" />
                     <TextBlock Text="{Binding LevelName}"
                                FontSize="14"
@@ -175,29 +176,30 @@
                             Content="📋 Habits"
                             Background="{Binding ActiveTab, Converter={StaticResource TabActiveBackgroundConverter}, ConverterParameter=Habits}"
                             Foreground="{Binding ActiveTab, Converter={StaticResource TabActiveForegroundConverter}, ConverterParameter=Habits}"
-                            Command="{ReflectionBinding ShowTabCommand}"
+                            Command="{Binding ShowTabCommand}"
                             CommandParameter="{x:Static desktopModels:ActiveTab.Habits}" />
                     <Button Classes="nav"
                             Content="🏆 Achievements"
                             Background="{Binding ActiveTab, Converter={StaticResource TabActiveBackgroundConverter}, ConverterParameter=Achievements}"
                             Foreground="{Binding ActiveTab, Converter={StaticResource TabActiveForegroundConverter}, ConverterParameter=Achievements}"
-                            Command="{ReflectionBinding ShowTabCommand}"
+                            Command="{Binding ShowTabCommand}"
                             CommandParameter="{x:Static desktopModels:ActiveTab.Achievements}" />
                     <Button Classes="nav"
                             Content="👤 Profile"
                             Background="{Binding ActiveTab, Converter={StaticResource TabActiveBackgroundConverter}, ConverterParameter=Profile}"
                             Foreground="{Binding ActiveTab, Converter={StaticResource TabActiveForegroundConverter}, ConverterParameter=Profile}"
-                            Command="{ReflectionBinding ShowTabCommand}"
+                            Command="{Binding ShowTabCommand}"
                             CommandParameter="{x:Static desktopModels:ActiveTab.Profile}" />
                     <Button Classes="nav"
                             Content="📊 Statistics"
                             Background="{Binding ActiveTab, Converter={StaticResource TabActiveBackgroundConverter}, ConverterParameter=Statistics}"
                             Foreground="{Binding ActiveTab, Converter={StaticResource TabActiveForegroundConverter}, ConverterParameter=Statistics}"
-                            Command="{ReflectionBinding ShowTabCommand}"
+                            Command="{Binding ShowTabCommand}"
                             CommandParameter="{x:Static desktopModels:ActiveTab.Statistics}" />
                 </StackPanel>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12"
+                            VerticalAlignment="Center">
                     <ComboBox ItemsSource="{Binding Categories}"
                               SelectedItem="{Binding SelectedCategory}"
                               Width="140"
@@ -206,122 +208,163 @@
                               BorderBrush="{StaticResource ColorBorder}">
                         <ComboBox.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding Converter={StaticResource CategoryDisplayConverter}}" />
+                                <TextBlock
+                                    Text="{Binding Converter={StaticResource CategoryDisplayConverter}}" />
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
                     <Button Classes="primary"
                             Content="+ New Habit"
-                            Command="{ReflectionBinding OpenCreateHabitCommand}" />
+                            Command="{Binding OpenCreateHabitCommand}" />
                 </StackPanel>
             </Grid>
         </Border>
 
         <Grid>
-            <!-- Lista com scroll ocupando o resto da janela -->
-            <ScrollViewer
-                IsVisible="{Binding ActiveTab, Converter={StaticResource TabVisibilityConverter
-        }, ConverterParameter=Habits}">
-                <ItemsControl ItemsSource="{Binding Habits}" Margin="0">
+            <!-- Aba Habits -->
+            <Grid
+                IsVisible="{Binding ActiveTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=Habits}"
+                RowDefinitions="Auto, *">
+
+                <!-- <Grid Grid.Row="0" ColumnDefinitions="Auto, *" Margin="0,0,0,20"> -->
+                <!--     <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"> -->
+                <!--         <TextBlock Text="📁 Category:" -->
+                <!--                    VerticalAlignment="Center" -->
+                <!--                    Foreground="{StaticResource ColorTextSecondary}" /> -->
+                <!--         <ComboBox ItemsSource="{Binding Categories}" -->
+                <!--                   SelectedItem="{Binding SelectedCategory}" -->
+                <!--                   Width="150"> -->
+                <!--             <ComboBox.ItemTemplate> -->
+                <!--                 <DataTemplate> -->
+                <!--                     <TextBlock -->
+                <!--                         Text="{Binding Converter={StaticResource CategoryDisplayConverter}}" /> -->
+                <!--                 </DataTemplate> -->
+                <!--             </ComboBox.ItemTemplate> -->
+                <!--         </ComboBox> -->
+                <!--     </StackPanel> -->
+                <!-- -->
+                <!--     <Button Command="{Binding OpenCreateHabitCommand}" -->
+                <!--             Content="+ New Habit" -->
+                <!--             Classes="accent" -->
+                <!--             Padding="12,8" -->
+                <!--             FontWeight="Bold" /> -->
+                <!-- </Grid> -->
+
+                <ItemsControl Grid.Row="1" ItemsSource="{Binding KanbanColumns}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <WrapPanel />
+                            <UniformGrid Rows="1" Columns="3" Margin="0"
+                                         HorizontalAlignment="Stretch" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
+
                     <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="models:Habit">
-                            <!-- Barra lateral: verde = feito hoje, vermelho = ainda não -->
-                            <Border Classes="card"
-                                    Padding="0"
-                                    Margin="0,0,16,16"
-                                    Width="340"
-                                    ClipToBounds="True">
-                                <Grid RowDefinitions="Auto,Auto,Auto">
-                                    <Border Grid.RowSpan="3"
-                                            Width="4"
-                                            HorizontalAlignment="Left"
-                                            Background="{Binding ., Converter={StaticResource HabitStatusAccentConverter}}" />
+                        <DataTemplate x:DataType="vm:KanbanColumnViewModel">
+                            <Border Background="#121214" CornerRadius="8" Margin="6" Padding="12">
+                                <DockPanel LastChildFill="True">
 
-                                    <Border Padding="20,20,20,10">
-                                        <StackPanel>
-                                            <Grid ColumnDefinitions="*,Auto">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding Name}" Classes="title" FontSize="16" />
-                                                <Border Background="{Binding Difficulty, Converter={StaticResource DifficultyBgConverter}}"
-                                                        CornerRadius="4"
-                                                        Padding="6,2"
-                                                        HorizontalAlignment="Left"
-                                                        Margin="0,5">
-                                                    <TextBlock Text="{Binding Difficulty}"
-                                                               FontSize="10"
-                                                               FontWeight="Bold"
-                                                               Foreground="{Binding Difficulty, Converter={StaticResource DifficultyColorConverter}}" />
-                                                </Border>
-                                            </StackPanel>
-                                                <TextBlock Grid.Column="1"
-                                                           Text="🔥"
-                                                           FontSize="20"
-                                                           VerticalAlignment="Top" />
-                                            </Grid>
-
-                                            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,10,0,0">
-                                                <TextBlock FontSize="12" Classes="subtle">
-                                                    <Run Text="📂 " />
-                                                    <Run Text="{Binding Category}" />
-                                                </TextBlock>
-                                                <TextBlock FontSize="12" Classes="subtle">
-                                                    <Run Text="🔥 " />
-                                                    <Run Text="{Binding CurrentStreak}" />
-                                                    <Run Text="d" />
-                                                </TextBlock>
-                                                <TextBlock FontSize="12" FontWeight="Bold" Foreground="{StaticResource ColorGold}">
-                                                    <Run Text="⭐ " />
-                                                    <Run Text="{Binding TotalXp}" />
-                                                    <Run Text=" XP" />
-                                                </TextBlock>
-                                            </StackPanel>
-                                        </StackPanel>
+                                    <Border DockPanel.Dock="Top" Background="#1a1a1e"
+                                            CornerRadius="6">
+                                        <DockPanel>
+                                            <TextBlock Text="{Binding Title}"
+                                                       FontWeight="Bold"
+                                                       FontSize="16"
+                                                       Foreground="{StaticResource ColorTextPrimary}" />
+                                            <Border Background="#2a2a30"
+                                                    CornerRadius="10"
+                                                    Padding="6,2"
+                                                    HorizontalAlignment="Right">
+                                                <TextBlock Text="{Binding Habits.Count}"
+                                                           FontSize="12"
+                                                           FontWeight="Bold"
+                                                           Foreground="{StaticResource ColorTextSecondary}" />
+                                            </Border>
+                                        </DockPanel>
                                     </Border>
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl ItemsSource="{Binding Habits}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Classes="card" Margin="0,0,0,10" Padding="14"
+                                                            Background="#1e1a1e">
+                                                        <StackPanel Spacing="8">
 
-                                    <Border Grid.Row="1" Height="1" Background="{StaticResource ColorBorder}" Margin="20,5" />
+                                                            <DockPanel>
+                                                                <TextBlock Text="{Binding Name}" FontSize="15"
+                                                                           FontWeight="Bold"
+                                                                           Foreground="{StaticResource ColorTextPrimary}"
+                                                                           TextWrapping="Wrap" MaxWidth="180" />
+                                                                <Border
+                                                                    Background="{Binding Difficulty, Converter={StaticResource DifficultyBgConverter}}"
+                                                                    CornerRadius="4" Padding="6,2"
+                                                                    HorizontalAlignment="Right" VerticalAlignment="Top">
+                                                                    <TextBlock Text="{Binding Difficulty}"
+                                                                               FontSize="10" FontWeight="Bold"
+                                                                               Foreground="{Binding Difficulty, Converter={StaticResource DifficultyColorConverter}}">
+                                                                    </TextBlock>
+                                                                </Border>
+                                                            </DockPanel>
+                                                            <TextBlock Text="{Binding Description}" FontSize="12"
+                                                                       Foreground="{StaticResource ColorTextSecondary}"
+                                                                       TextWrapping="Wrap" Margin="0,2,0,4"
+                                                                       IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
-                                    <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" Margin="20,0,20,20" ColumnSpacing="8">
-                                        <Button Grid.Column="0"
-                                                Classes="primary"
-                                                Content="{Binding ., Converter={StaticResource HabitDoneLabelConverter}}"
-                                                Command="{ReflectionBinding $parent[Window].DataContext.CompleteHabitCommand}"
-                                                CommandParameter="{Binding}"
-                                                HorizontalAlignment="Stretch"
-                                                HorizontalContentAlignment="Center" />
-                                        <Button Grid.Column="1"
-                                                Classes="secondary"
-                                                Content="📅"
-                                                Command="{ReflectionBinding $parent[Window].DataContext.OpenHabitHistoryCommand}"
-                                                CommandParameter="{Binding}" />
-                                        <Button Grid.Column="2"
-                                                Classes="danger"
-                                                Content="🗑"
-                                                Command="{ReflectionBinding $parent[Window].DataContext.DeleteHabitCommand}"
-                                                CommandParameter="{Binding}" />
-                                    </Grid>
-                                </Grid>
+                                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                <TextBlock Text="🔥" FontSize="12" />
+                                                                <TextBlock Text="{Binding CurrentStreak}" FontSize="12"
+                                                                           FontWeight="Bold"
+                                                                           Foreground="{StaticResource ColorTextPrimary}" />
+                                                            </StackPanel>
+
+                                                            <Border BorderBrush="#2a2a30" BorderThickness="0,1,0,0"
+                                                                    Margin="0,4" Padding="0,4,0,0">
+                                                                <Grid ColumnDefinitions="*, Auto, Auto"
+                                                                      x:CompileBindings="False">
+                                                                    <Button Grid.Column="0"
+                                                                            Command="{Binding $parent[Window].DataContext.CompleteHabitCommand}"
+                                                                            CommandParameter="{Binding}"
+                                                                            Content="{Binding Converter={StaticResource HabitDoneLabelConverter}}"
+                                                                            Background="{Binding Converter={StaticResource HabitStatusAccentConverter}}"
+                                                                            Foreground="White" FontSize="12" Padding="8,4" HorizontalAlignment="Left" CornerRadius="4"/>
+                                                                    <Button Grid.Column="1"
+                                                                            Command="{Binding $parent[Window].DataContext.OpenHabitHistoryCommand}"
+                                                                            CommandParameter="{Binding}"
+                                                                            Content="📅" ToolTip.Tip="History"
+                                                                            Background="Transparent" BorderThickness="0" Margin="4,0" Padding="6,4"/>
+                                                                    <Button Grid.Column="2"
+                                                                            Command="{Binding $parent[Window].DataContext.DeleteHabitCommand}"
+                                                                            CommandParameter="{Binding}"
+                                                                            Content="🗑️" ToolTip.Tip="Delete"
+                                                                            Background="Transparent"
+                                                                            BorderThickness="0" Padding="6,4" />
+                                                                </Grid>
+                                                            </Border>
+
+
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+
+                                </DockPanel>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-            </ScrollViewer>
+            </Grid>
+
+            <!-- Aba Achievements -->
             <ScrollViewer
-                IsVisible="{Binding ActiveTab, 
-                  Converter={StaticResource TabVisibilityConverter}, 
-                  ConverterParameter=Achievements}">
+                IsVisible="{Binding ActiveTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=Achievements}">
                 <ItemsControl ItemsSource="{Binding Achievements}" Margin="20">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="models:Achievement">
                             <Border Classes="card"
                                     Padding="{StaticResource PadCard}"
                                     Margin="0,0,0,12"
-                                    Opacity="{Binding IsUnlocked, 
-                                      Converter={StaticResource BoolToOpacityConverter}}">
+                                    Opacity="{Binding IsUnlocked, Converter={StaticResource BoolToOpacityConverter}}">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="{Binding Icon}"
                                                FontSize="28"
@@ -329,7 +372,8 @@
                                                Margin="0,0,16,0" />
                                     <StackPanel>
                                         <TextBlock Text="{Binding Name}"
-                                                   FontSize="16" FontWeight="Bold"
+                                                   FontSize="16"
+                                                   FontWeight="Bold"
                                                    Foreground="{StaticResource ColorTextPrimary}" />
                                         <TextBlock Text="{Binding Description}"
                                                    FontSize="12"
@@ -342,18 +386,15 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </ScrollViewer>
-            <!-- Painel de Perfil -->
+
+            <!-- Aba Profile -->
             <ScrollViewer
-                IsVisible="{Binding ActiveTab, 
-              Converter={StaticResource TabVisibilityConverter}, 
-              ConverterParameter=Profile}">
+                IsVisible="{Binding ActiveTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=Profile}">
                 <StackPanel Margin="20" Spacing="16">
 
-                    <!-- Card principal -->
                     <Border Classes="card" Padding="24">
                         <StackPanel Spacing="12">
 
-                            <!-- Placeholder foto + nome -->
                             <StackPanel Orientation="Horizontal" Spacing="16">
                                 <Border Width="72" Height="72"
                                         CornerRadius="36"
@@ -365,9 +406,11 @@
                                 </Border>
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="{Binding ProfileUserName}"
-                                               FontSize="22" FontWeight="Bold"
+                                               FontSize="22"
+                                               FontWeight="Bold"
                                                Foreground="{StaticResource ColorTextPrimary}" />
-                                    <TextBlock FontSize="13" Foreground="{StaticResource ColorTextSecondary}">
+                                    <TextBlock FontSize="13"
+                                               Foreground="{StaticResource ColorTextSecondary}">
                                         <Run Text="Level " />
                                         <Run Text="{Binding Level}" FontWeight="Bold" />
                                         <Run Text=" · " />
@@ -376,34 +419,38 @@
                                 </StackPanel>
                             </StackPanel>
 
-                            <!-- Descrição -->
                             <TextBlock Text="{Binding ProfileDescription}"
                                        FontSize="13"
                                        Foreground="{StaticResource ColorTextSecondary}"
                                        TextWrapping="Wrap" />
 
-                            <!-- Info -->
                             <WrapPanel Orientation="Horizontal">
                                 <Border Background="{StaticResource ColorSurfaceAlt}"
-                                        CornerRadius="{StaticResource RadiusSm}" Padding="10,6"
+                                        CornerRadius="{StaticResource RadiusSm}"
+                                        Padding="10,6"
                                         Margin="0,0,8,8">
-                                    <TextBlock FontSize="12" Foreground="{StaticResource ColorTextPrimary}">
+                                    <TextBlock FontSize="12"
+                                               Foreground="{StaticResource ColorTextPrimary}">
                                         <Run Text="⚧ " />
                                         <Run Text="{Binding ProfileGender}" />
                                     </TextBlock>
                                 </Border>
                                 <Border Background="{StaticResource ColorSurfaceAlt}"
-                                        CornerRadius="{StaticResource RadiusSm}" Padding="10,6"
+                                        CornerRadius="{StaticResource RadiusSm}"
+                                        Padding="10,6"
                                         Margin="0,0,8,8">
-                                    <TextBlock FontSize="12" Foreground="{StaticResource ColorTextPrimary}">
+                                    <TextBlock FontSize="12"
+                                               Foreground="{StaticResource ColorTextPrimary}">
                                         <Run Text="🎂 " />
                                         <Run Text="{Binding ProfileDateOfBirth}" />
                                     </TextBlock>
                                 </Border>
                                 <Border Background="{StaticResource ColorSurfaceAlt}"
-                                        CornerRadius="{StaticResource RadiusSm}" Padding="10,6"
+                                        CornerRadius="{StaticResource RadiusSm}"
+                                        Padding="10,6"
                                         Margin="0,0,8,8">
-                                    <TextBlock FontSize="12" Foreground="{StaticResource ColorTextPrimary}">
+                                    <TextBlock FontSize="12"
+                                               Foreground="{StaticResource ColorTextPrimary}">
                                         <Run Text="📅 Member since " />
                                         <Run Text="{Binding ProfileMemberSince}" />
                                     </TextBlock>
@@ -413,17 +460,20 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Stats rápidas -->
                     <Border Classes="card" Padding="24">
                         <StackPanel Spacing="8">
-                            <TextBlock Text="Stats" FontSize="16" FontWeight="Bold"
+                            <TextBlock Text="Stats"
+                                       FontSize="16"
+                                       FontWeight="Bold"
                                        Foreground="{StaticResource ColorTextPrimary}" />
-                            <TextBlock FontSize="13" Foreground="{StaticResource ColorTextSecondary}">
+                            <TextBlock FontSize="13"
+                                       Foreground="{StaticResource ColorTextSecondary}">
                                 <Run Text="⭐ Total XP: " />
                                 <Run Text="{Binding CurrentXp}" FontWeight="Bold"
                                      Foreground="{StaticResource ColorTextPrimary}" />
                             </TextBlock>
-                            <TextBlock FontSize="13" Foreground="{StaticResource ColorTextSecondary}">
+                            <TextBlock FontSize="13"
+                                       Foreground="{StaticResource ColorTextSecondary}">
                                 <Run Text="🔥 Global Longest Streak: " />
                                 <Run Text="{Binding GlobalLongestStreak}" FontWeight="Bold"
                                      Foreground="{StaticResource ColorTextPrimary}" />
@@ -432,11 +482,10 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Botões -->
                     <StackPanel Orientation="Horizontal" Spacing="12">
                         <Button Classes="primary"
                                 Content="✏️ Edit Profile"
-                                Command="{ReflectionBinding OpenEditProfileCommand}"
+                                Command="{Binding OpenEditProfileCommand}"
                                 Padding="16,10" />
                         <Button Classes="secondary"
                                 Content="👁 Preview"
@@ -445,58 +494,77 @@
 
                 </StackPanel>
             </ScrollViewer>
+
+            <!-- Aba Statistics -->
             <ScrollViewer
-                IsVisible="{Binding ActiveTab,
-      Converter={StaticResource TabVisibilityConverter},
-      ConverterParameter=Statistics}">
+                IsVisible="{Binding ActiveTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=Statistics}">
                 <StackPanel Margin="20" Spacing="16">
 
                     <Border Classes="card" Padding="24">
                         <StackPanel Spacing="12">
-                            <TextBlock Text="📊 Overview" FontSize="18" FontWeight="Bold"
+                            <TextBlock Text="📊 Overview"
+                                       FontSize="18"
+                                       FontWeight="Bold"
                                        Foreground="{StaticResource ColorTextPrimary}" />
 
-                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" RowSpacing="10" ColumnSpacing="10">
-                                <Border Grid.Row="0" Grid.Column="0" Background="{StaticResource ColorSurfaceAlt}"
-                                        CornerRadius="{StaticResource RadiusSm}" Padding="12">
+                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto"
+                                  RowSpacing="10" ColumnSpacing="10">
+                                <Border Grid.Row="0" Grid.Column="0"
+                                        Background="{StaticResource ColorSurfaceAlt}"
+                                        CornerRadius="{StaticResource RadiusSm}"
+                                        Padding="12">
                                     <StackPanel>
-                                        <TextBlock Text="Total Habits" Foreground="{StaticResource ColorTextSecondary}"
+                                        <TextBlock Text="Total Habits"
+                                                   Foreground="{StaticResource ColorTextSecondary}"
                                                    FontSize="12" />
                                         <TextBlock Text="{Binding StatTotalHabits}"
-                                                   Foreground="{StaticResource ColorTextPrimary}" FontSize="20"
+                                                   Foreground="{StaticResource ColorTextPrimary}"
+                                                   FontSize="20"
                                                    FontWeight="Bold" />
                                     </StackPanel>
                                 </Border>
 
-                                <Border Grid.Row="0" Grid.Column="1" Background="{StaticResource ColorSurfaceAlt}"
-                                        CornerRadius="{StaticResource RadiusSm}" Padding="12">
+                                <Border Grid.Row="0" Grid.Column="1"
+                                        Background="{StaticResource ColorSurfaceAlt}"
+                                        CornerRadius="{StaticResource RadiusSm}"
+                                        Padding="12">
                                     <StackPanel>
                                         <TextBlock Text="Completed Today"
-                                                   Foreground="{StaticResource ColorTextSecondary}" FontSize="12" />
+                                                   Foreground="{StaticResource ColorTextSecondary}"
+                                                   FontSize="12" />
                                         <TextBlock Text="{Binding StatCompletedToday}"
-                                                   Foreground="{StaticResource ColorTextPrimary}" FontSize="20"
+                                                   Foreground="{StaticResource ColorTextPrimary}"
+                                                   FontSize="20"
                                                    FontWeight="Bold" />
                                     </StackPanel>
                                 </Border>
 
-                                <Border Grid.Row="1" Grid.Column="0" Background="{StaticResource ColorSurfaceAlt}"
-                                        CornerRadius="{StaticResource RadiusSm}" Padding="12">
+                                <Border Grid.Row="1" Grid.Column="0"
+                                        Background="{StaticResource ColorSurfaceAlt}"
+                                        CornerRadius="{StaticResource RadiusSm}"
+                                        Padding="12">
                                     <StackPanel>
                                         <TextBlock Text="Total Completions"
-                                                   Foreground="{StaticResource ColorTextSecondary}" FontSize="12" />
+                                                   Foreground="{StaticResource ColorTextSecondary}"
+                                                   FontSize="12" />
                                         <TextBlock Text="{Binding StatTotalCompletions}"
                                                    Foreground="{StaticResource ColorTextPrimary}"
-                                                   FontSize="20" FontWeight="Bold" />
+                                                   FontSize="20"
+                                                   FontWeight="Bold" />
                                     </StackPanel>
                                 </Border>
 
-                                <Border Grid.Row="1" Grid.Column="1" Background="{StaticResource ColorSurfaceAlt}"
-                                        CornerRadius="{StaticResource RadiusSm}" Padding="12">
+                                <Border Grid.Row="1" Grid.Column="1"
+                                        Background="{StaticResource ColorSurfaceAlt}"
+                                        CornerRadius="{StaticResource RadiusSm}"
+                                        Padding="12">
                                     <StackPanel>
-                                        <TextBlock Text="Total XP" Foreground="{StaticResource ColorTextSecondary}"
+                                        <TextBlock Text="Total XP"
+                                                   Foreground="{StaticResource ColorTextSecondary}"
                                                    FontSize="12" />
                                         <TextBlock Text="{Binding StatTotalXp}"
-                                                   Foreground="{StaticResource ColorTextPrimary}" FontSize="20"
+                                                   Foreground="{StaticResource ColorTextPrimary}"
+                                                   FontSize="20"
                                                    FontWeight="Bold" />
                                     </StackPanel>
                                 </Border>
@@ -506,14 +574,18 @@
 
                     <Border Classes="card" Padding="24">
                         <StackPanel Spacing="8">
-                            <TextBlock Text="📈 Level Progress" FontSize="18" FontWeight="Bold"
+                            <TextBlock Text="📈 Level Progress"
+                                       FontSize="18"
+                                       FontWeight="Bold"
                                        Foreground="{StaticResource ColorTextPrimary}" />
-                            <TextBlock FontSize="14" Foreground="{StaticResource ColorTextSecondary}">
+                            <TextBlock FontSize="14"
+                                       Foreground="{StaticResource ColorTextSecondary}">
                                 <Run Text="Level " />
                                 <Run Text="{Binding StatCurrentLevel}" FontWeight="Bold"
                                      Foreground="{StaticResource ColorTextPrimary}" />
                                 <Run Text=" · " />
-                                <Run Text="{Binding StatLevelName}" Foreground="{StaticResource ColorTextPrimary}" />
+                                <Run Text="{Binding StatLevelName}"
+                                     Foreground="{StaticResource ColorTextPrimary}" />
                             </TextBlock>
                             <ProgressBar Minimum="0"
                                          Maximum="{Binding StatXpForNext}"
@@ -521,7 +593,8 @@
                                          Height="10"
                                          Foreground="{StaticResource ColorAccent}"
                                          Background="{StaticResource ColorSurfaceAlt}" />
-                            <TextBlock FontSize="12" Foreground="{StaticResource ColorTextSecondary}">
+                            <TextBlock FontSize="12"
+                                       Foreground="{StaticResource ColorTextSecondary}">
                                 <Run Text="{Binding StatXpProgress}" />
                                 <Run Text=" / " />
                                 <Run Text="{Binding StatXpForNext}" />
@@ -532,13 +605,18 @@
 
                     <Border Classes="card" Padding="24">
                         <StackPanel Spacing="8">
-                            <TextBlock Text="🔥 Best Streak" FontSize="18" FontWeight="Bold"
+                            <TextBlock Text="🔥 Best Streak"
+                                       FontSize="18"
+                                       FontWeight="Bold"
                                        Foreground="{StaticResource ColorTextPrimary}" />
-                            <TextBlock FontSize="14" Foreground="{StaticResource ColorTextSecondary}">
-                                <Run Text="{Binding StatBestStreakName}" Foreground="{StaticResource ColorTextPrimary}"
+                            <TextBlock FontSize="14"
+                                       Foreground="{StaticResource ColorTextSecondary}">
+                                <Run Text="{Binding StatBestStreakName}"
+                                     Foreground="{StaticResource ColorTextPrimary}"
                                      FontWeight="Bold" />
                                 <Run Text=" — " />
-                                <Run Text="{Binding StatBestStreakDays}" Foreground="{StaticResource ColorTextPrimary}"
+                                <Run Text="{Binding StatBestStreakDays}"
+                                     Foreground="{StaticResource ColorTextPrimary}"
                                      FontWeight="Bold" />
                                 <Run Text=" days" />
                             </TextBlock>

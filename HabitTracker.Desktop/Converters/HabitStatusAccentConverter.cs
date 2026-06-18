@@ -8,7 +8,7 @@ namespace HabitTracker.Desktop.Converters;
 
 public class HabitStatusAccentConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         var completed = value is Habit h && h.IsCompletedToday();
         return completed

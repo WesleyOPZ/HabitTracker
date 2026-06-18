@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -19,7 +20,8 @@ public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly HabitService _habitService;
 
-    public ObservableCollection<Habit> Habits { get; } = new();
+    public ObservableCollection<KanbanColumnViewModel> KanbanColumns { get; } = new();
+
 
     [ObservableProperty] private int _level;
     [ObservableProperty] private string _levelName = string.Empty;
@@ -50,6 +52,12 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public MainWindowViewModel()
     {
+        if (Design.IsDesignMode)
+        {
+            _habitService = null!;
+            return;
+        }
+    
         _habitService = new HabitService();
         LoadHabits();
     }
@@ -57,6 +65,14 @@ public partial class MainWindowViewModel : ViewModelBase
     private void LoadHabits()
     {
         _allHabits = _habitService.GetHabits();
+
+        if (KanbanColumns.Count == 0)
+        {
+            KanbanColumns.Add(new KanbanColumnViewModel(1, "To-Do"));
+            KanbanColumns.Add(new KanbanColumnViewModel(2, "In-Progress"));
+            KanbanColumns.Add(new KanbanColumnViewModel(3, "Done"));
+        }
+
         ApplyFilter();
 
         int totalXp = _habitService.GetProfile().TotalXp;
@@ -204,23 +220,32 @@ public partial class MainWindowViewModel : ViewModelBase
         Category.Personal
     };
 
-    partial void OnSelectedCategoryChanged(Category? value)
-    {
-        ApplyFilter();
-    }
-
     private void ApplyFilter()
     {
-        Habits.Clear();
+        foreach (var column in KanbanColumns)
+        {
+            column.Habits.Clear();
+        }
 
-        var filtered = SelectedCategory == null
+        var filteredHabits = SelectedCategory == null
             ? _allHabits
             : _allHabits.Where(h => h.Category == SelectedCategory);
 
-        foreach (var habit in filtered)
+        foreach (var habit in filteredHabits)
         {
-            Habits.Add(habit);
+            int targetFolder = habit.FolderId > 0 ? habit.FolderId : 1;
+
+            var targetColumn = KanbanColumns.FirstOrDefault(c => c.Id == targetFolder);
+            if (targetColumn != null)
+            {
+                targetColumn.Habits.Add(habit);
+            }
         }
+    }
+
+    partial void OnSelectedCategoryChanged(Category? value)
+    {
+        ApplyFilter();
     }
 
     private void LoadProfile()
@@ -239,7 +264,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private void LoadStatistics()
     {
         var stats = _habitService.Statistics.GetStatistics();
-        
+
         StatTotalHabits = stats.TotalHabits;
         StatCompletedToday = stats.CompletedToday;
         StatTotalXp = stats.TotalXp;
@@ -248,7 +273,7 @@ public partial class MainWindowViewModel : ViewModelBase
         StatXpForNext = stats.XpForNext;
         StatXpProgress = stats.XpProgress;
         StatTotalCompletions = stats.TotalCompletions;
-        
+
         StatBestStreakName = stats.BestStreak?.Name ?? "No habits yet";
         StatBestStreakDays = stats.BestStreak?.CurrentStreak ?? 0;
     }

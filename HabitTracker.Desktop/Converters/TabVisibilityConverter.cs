@@ -7,11 +7,11 @@ namespace HabitTracker.Desktop.Converters;
 
 public class TabVisibilityConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         if (value is ActiveTab currentTab && parameter is string tabName)
             return currentTab.ToString() == tabName;
-        
+
         return false;
     }
 

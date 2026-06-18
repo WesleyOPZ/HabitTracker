@@ -1,0 +1,2588 @@
+=== ARQUIVO: ./HabitTracker.Core/Data/JsonStorage.cs ===
+using System.Text.Json;
+using HabitTracker.Core.Models;
+
+namespace HabitTracker.Core.Data;
+
+public class HabitStorageData
+{
+    public List<HabitFolder> Folders { get; set; } = new();
+    public List<Habit> Habits { get; set; } = new();
+}
+
+public class JsonStorage
+{
+    private readonly string _habitsFilePath;
+    private readonly string _profileFilePath;
+
+
+    public JsonStorage()
+    {
+        string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "HabitTracker");
+        Directory.CreateDirectory(folder);
+        _habitsFilePath = Path.Combine(folder, "habits.json");
+        _profileFilePath = Path.Combine(folder, "profile.json");
+    }
+
+    public HabitStorageData LoadHabits()
+    {
+        if (!File.Exists(_habitsFilePath))
+        {
+            return new HabitStorageData();
+        }
+
+        try
+        {
+            string json = File.ReadAllText(_habitsFilePath);
+
+            var data = JsonSerializer.Deserialize<HabitStorageData>(json);
+            if (data != null && (data.Folders.Count > 0 || data.Habits.Count > 0))
+            {
+                return data;
+            }
+
+            var legacyHabits = JsonSerializer.Deserialize<List<Habit>>(json);
+            if (legacyHabits != null)
+            {
+                return new HabitStorageData
+                {
+                    Habits = legacyHabits
+                };
+            }
+
+        }
+        catch
+        {
+            return new HabitStorageData();
+        }
+        
+        return new HabitStorageData();
+    }
+
+
+    public void SaveHabits(HabitStorageData data)
+    {
+        var options = new JsonSerializerOptions { WriteIndented = true };
+        string json = JsonSerializer.Serialize(data, options);
+        File.WriteAllText(_habitsFilePath, json);
+    }
+
+    public UserProfile LoadUserProfile()
+    {
+        if (!File.Exists(_profileFilePath))
+        {
+            return new UserProfile() { DateCreated = DateTime.Now };
+        }
+
+        try
+        {
+            string json = File.ReadAllText(_profileFilePath);
+            return JsonSerializer.Deserialize<UserProfile>(json) ?? new UserProfile();
+        }
+        catch
+        {
+            return new UserProfile() { DateCreated = DateTime.Now };
+        }
+    }
+
+    public void SaveProfile(UserProfile profile)
+    {
+        var options = new JsonSerializerOptions { WriteIndented = true };
+        string json = JsonSerializer.Serialize(profile, options);
+        File.WriteAllText(_profileFilePath, json);
+    }
+}
+=== ARQUIVO: ./HabitTracker.Core/Models/Achievement.cs ===
+namespace HabitTracker.Core.Models;
+
+public class Achievement
+{
+    public AchievementType Type { get; set; }
+    public string Name { get; set; } =  string.Empty;
+    public string Description { get; set; } =  string.Empty;
+    public string Icon { get; set; } =  string.Empty;
+    public bool IsUnlocked { get; set; }
+    public DateTime? UnlockedAt { get; set; }
+}
+=== ARQUIVO: ./HabitTracker.Core/Models/AchievementType.cs ===
+namespace HabitTracker.Core.Models;
+
+public enum AchievementType
+{
+    // Iniciante
+    FirstStep,
+    Beginner,
+    GettingStarted,
+    
+    // Consistência
+    Dedicated,
+    Committed,
+    Unstoppable,
+    
+    // Exploração
+    Diverse,
+    CategoryMaster,
+    
+    // Níveis
+    Level3,
+    Level5,
+    Level7,
+    
+    // XP
+    Century,
+    HalfK,
+    Millennium
+}
+=== ARQUIVO: ./HabitTracker.Core/Models/Category.cs ===
+namespace HabitTracker.Core.Models;
+
+public enum Category
+{
+    Health,
+    Study,
+    Work,
+    Personal
+}
+=== ARQUIVO: ./HabitTracker.Core/Models/CompleteHabitResult.cs ===
+namespace HabitTracker.Core.Models;
+
+public class CompleteHabitResult
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public int XpEarned { get; set; }
+    public bool LeveledUp { get; set; }
+    public int NewLevel { get; set; }
+    public bool AlreadyCompleted { get; set; }
+    public List<Achievement> NewAchievements { get; set; } = new();
+
+}
+=== ARQUIVO: ./HabitTracker.Core/Models/CreateHabitResult.cs ===
+namespace HabitTracker.Core.Models;
+
+public class CreateHabitResult
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public List<Achievement> NewAchievements { get; set; } = new();
+}
+=== ARQUIVO: ./HabitTracker.Core/Models/DeleteHabitResult.cs ===
+namespace HabitTracker.Core.Models;
+
+public class DeleteHabitResult
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+}
+=== ARQUIVO: ./HabitTracker.Core/Models/Difficulty.cs ===
+namespace HabitTracker.Core.Models;
+
+public enum Difficulty
+{
+    Easy = 5,
+    Normal = 10,
+    Hard = 20,
+    Legendary = 50
+}
+=== ARQUIVO: ./HabitTracker.Core/Models/Gender.cs ===
+namespace HabitTracker.Desktop.Models;
+
+public enum Gender
+{
+    Unknown,
+    Male,
+    Female,
+    NonBinary,
+    PreferNotToSay
+}
+=== ARQUIVO: ./HabitTracker.Core/Models/Habit.cs ===
+namespace HabitTracker.Core.Models;
+
+public class Habit
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public int CurrentStreak { get; set; }
+    public int LongestStreak { get; set; }
+    public int TotalXp { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public Difficulty Difficulty { get; set; } = Difficulty.Normal;
+    public Category Category { get; set; } = Category.Personal;
+    public List<DateTime> CompletedDates { get; set; } = new List<DateTime>();
+    public int FolderId { get; set; }
+    
+    public bool IsCompletedToday()
+    {
+        return CompletedDates.Any(d => d.Date == DateTime.Today);
+    }
+
+    public DateTime? LastCompletedDate()
+    {
+        return CompletedDates.Any() ? CompletedDates.Max() : null;
+    }
+}
+=== ARQUIVO: ./HabitTracker.Core/Models/HabitFolder.cs ===
+namespace HabitTracker.Core.Models;
+
+public class HabitFolder
+{
+    public int Id {  get; set; } 
+    public string Name {  get; set; } = string.Empty;
+    public int DisplayOrder {  get; set; }
+    public DateTime CreatedAt {  get; set; }
+} 
+=== ARQUIVO: ./HabitTracker.Core/Models/StatisticsResult.cs ===
+namespace HabitTracker.Core.Models;
+
+public class StatisticsResult
+{
+    public int TotalHabits { get; set; }
+    public int CompletedToday { get; set; }
+    public int TotalXp { get; set; }
+    public int CurrentLevel { get; set; }
+    public string LevelName { get; set; } = string.Empty;
+    public int XpForNext { get; set; }
+    public int XpProgress { get; set; }
+    public int TotalCompletions { get; set; }
+    public Habit? BestStreak  { get; set; }
+}
+=== ARQUIVO: ./HabitTracker.Core/Models/UserProfile.cs ===
+using HabitTracker.Desktop.Models;
+
+namespace HabitTracker.Core.Models;
+
+public class UserProfile
+{
+    public string UserName { get; set; } = string.Empty;
+    public string PhotoPath { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public Gender Gender { get; set; } = Gender.Unknown;
+    public int TotalXp { get; set; }
+    public int GlobalLongestStreak { get; set; }
+    public DateTime? DateOfBirth { get; set; }
+    public DateTime DateCreated { get; set; }
+    public List<AchievementType> FeaturedAchievements { get; set; } = new();
+}
+
+
+=== ARQUIVO: ./HabitTracker.Core/Services/AchievementService.cs ===
+using HabitTracker.Core.Models;
+
+namespace HabitTracker.Core.Services;
+
+public class AchievementService
+{
+    private List<Achievement> _achievements;
+    private readonly List<Habit> _habits;
+    private readonly UserProfile _profile;
+
+    public AchievementService(List<Habit> habits, UserProfile profile)
+    {
+        _habits = habits;
+        _profile = profile;
+        _achievements = InitializeAchievements();
+        RecheckAllAchievements();
+    }
+    
+    public List<Achievement> GetAllAchievements() => _achievements ?? new List<Achievement>();
+
+    private List<Achievement> InitializeAchievements()
+    {
+        return new List<Achievement>
+        {
+            // Iniciante
+            new Achievement
+            {
+                Type = AchievementType.FirstStep,
+                Name = "First Step",
+                Description = "Create your first habit",
+                Icon = "🌱",
+                IsUnlocked = false,
+            },
+            new Achievement
+            {
+                Type = AchievementType.Beginner,
+                Name = "Beginner",
+                Description = "Complete a habit for the first time",
+                Icon = "⭐",
+                IsUnlocked = false,
+            },
+            new Achievement
+            {
+                Type = AchievementType.GettingStarted,
+                Name = "Getting Started",
+                Description = "Complete 5 habits total",
+                Icon = "🔥",
+                IsUnlocked = false
+            },
+
+            // Consistência
+            new Achievement
+            {
+                Type = AchievementType.Dedicated,
+                Name = "Dedicated",
+                Description = "Maintain a 7-day streak",
+                Icon = "📅",
+                IsUnlocked = false
+            },
+            new Achievement
+            {
+                Type = AchievementType.Committed,
+                Name = "Committed",
+                Description = "Maintain a 30-day streak",
+                Icon = "🎯",
+                IsUnlocked = false
+            },
+            new Achievement
+            {
+                Type = AchievementType.Unstoppable,
+                Name = "Unstoppable",
+                Description = "Maintain a 100-day streak",
+                Icon = "💪",
+                IsUnlocked = false
+            },
+
+            // Exploração
+            new Achievement
+            {
+                Type = AchievementType.Diverse,
+                Name = "Diverse",
+                Description = "Have at least 1 habit in each category",
+                Icon = "🌈",
+                IsUnlocked = false
+            },
+            new Achievement
+            {
+                Type = AchievementType.CategoryMaster,
+                Name = "Category Master",
+                Description = "Complete 10 habits in a single category",
+                Icon = "📚",
+                IsUnlocked = false
+            },
+
+            // Níveis
+            new Achievement
+            {
+                Type = AchievementType.Level3,
+                Name = "Rising Star",
+                Description = "Reach level 3",
+                Icon = "🎖️",
+                IsUnlocked = false
+            },
+            new Achievement
+            {
+                Type = AchievementType.Level5,
+                Name = "Expert",
+                Description = "Reach level 5",
+                Icon = "🏆",
+                IsUnlocked = false
+            },
+            new Achievement
+            {
+                Type = AchievementType.Level7,
+                Name = "Legend",
+                Description = "Reach level 7",
+                Icon = "👑",
+                IsUnlocked = false
+            },
+
+            // XP
+            new Achievement
+            {
+                Type = AchievementType.Century,
+                Name = "Century",
+                Description = "Earn 100 total XP",
+                Icon = "⚡",
+                IsUnlocked = false
+            },
+            new Achievement
+            {
+                Type = AchievementType.HalfK,
+                Name = "Half K",
+                Description = "Earn 500 total XP",
+                Icon = "💎",
+                IsUnlocked = false
+            },
+            new Achievement
+            {
+                Type = AchievementType.Millennium,
+                Name = "Millennium",
+                Description = "Earn 1000 total XP",
+                Icon = "🔱",
+                IsUnlocked = false
+            }
+        };
+    }
+    // Checa TODAS as conquistas e desbloqueia as que foram atingidas
+
+    public List<Achievement> CheckAchievements()
+    {
+        var newlyUnlocked = new List<Achievement>();
+
+        // Checa cada conquista
+        foreach (var achievement in _achievements.Where(a => !a.IsUnlocked))
+        {
+            if (ShouldUnlockAchievements(achievement))
+            {
+                achievement.IsUnlocked = true;
+                achievement.UnlockedAt = DateTime.Now;
+                newlyUnlocked.Add(achievement);
+            }
+        }
+
+        return newlyUnlocked;
+    }
+
+    private bool CheckDiverseAchievement()
+    {
+        var categories = new[] { Category.Health, Category.Study, Category.Work, Category.Personal };
+        return categories.All(cat => _habits.Any(h => h.Category == cat));
+    }
+
+    private bool CheckCategoryMasterAchievement()
+    {
+        var categories = new[] { Category.Health, Category.Study, Category.Work, Category.Personal };
+        foreach (var category in categories)
+        {
+            int completionsInCategory = _habits
+                .Where(h => h.Category == category)
+                .Sum(h => h.CompletedDates.Count);
+
+            if (completionsInCategory >= 10)
+                return true;
+        }
+
+        return false;
+    }
+
+    private void RecheckAllAchievements()
+    {
+        foreach (var achievement in _achievements)
+        {
+            if (ShouldUnlockAchievements(achievement) && !achievement.IsUnlocked)
+            {
+                achievement.IsUnlocked = true;
+                achievement.UnlockedAt = DateTime.Now;
+            }
+        }
+    }
+
+    private bool ShouldUnlockAchievements(Achievement achievement)
+    {
+        return achievement.Type switch
+        {
+            AchievementType.FirstStep => _habits.Count >= 1,
+            AchievementType.Beginner => _habits.Sum(h => h.CompletedDates.Count) >= 1,
+            AchievementType.GettingStarted => _habits.Sum(h => h.CompletedDates.Count) >= 5,
+            AchievementType.Dedicated => _habits.Any(h => h.LongestStreak >= 7),
+            AchievementType.Committed => _habits.Any(h => h.LongestStreak >= 30),
+            AchievementType.Unstoppable => _habits.Any(h => h.LongestStreak >= 100),
+            AchievementType.Diverse => CheckDiverseAchievement(),
+            AchievementType.CategoryMaster => CheckCategoryMasterAchievement(),
+            AchievementType.Level3 => LevelSystem.CalculateLevel(_profile.TotalXp) >= 3,
+            AchievementType.Level5 => LevelSystem.CalculateLevel(_profile.TotalXp) >= 5,
+            AchievementType.Level7 => LevelSystem.CalculateLevel(_profile.TotalXp) >= 7,
+            AchievementType.Century => _profile.TotalXp >= 100,
+            AchievementType.HalfK => _profile.TotalXp >= 500,
+            AchievementType.Millennium => _profile.TotalXp >= 1000,
+            _ => false
+        };
+    }
+    
+}
+=== ARQUIVO: ./HabitTracker.Core/Services/HabitService.cs ===
+using HabitTracker.Core.Models;
+using HabitTracker.Core.Data;
+
+namespace HabitTracker.Core.Services;
+
+public class HabitService
+{
+    private List<Habit> _habits;
+    private List<HabitFolder> _folders;
+    private readonly JsonStorage _storage;
+    private int _nextId;
+    private int _nextFolderId;
+    private UserProfile _profile;
+
+    public StatisticsService Statistics { get; private set; }
+    public AchievementService Achievements { get; private set; }
+    public UserProfile GetProfile() => _profile;
+
+    public HabitService()
+    {
+        _storage = new JsonStorage();
+        var storageData = _storage.LoadHabits();
+        _habits = storageData.Habits;
+        _folders = storageData.Folders;
+
+        if (!_folders.Any())
+        {
+            _folders.Add(new HabitFolder { Id = 1, Name = "To Do", DisplayOrder = 0, CreatedAt = DateTime.UtcNow });
+            _folders.Add(
+                new HabitFolder { Id = 2, Name = "In Progress", DisplayOrder = 1, CreatedAt = DateTime.UtcNow });
+            _folders.Add(new HabitFolder { Id = 3, Name = "Done", DisplayOrder = 2, CreatedAt = DateTime.UtcNow });
+
+
+            foreach (var habit in _habits)
+            {
+                if (habit.FolderId == 0)
+                {
+                    habit.FolderId = 1;
+                }
+            }
+
+            SaveAllData();
+        }
+
+        _nextId = _habits.Any() ? _habits.Max(h => h.Id) + 1 : 1;
+        _nextFolderId = _folders.Any() ? _folders.Max(f => f.Id) + 1 : 1;
+
+        _profile = _storage.LoadUserProfile();
+
+        Statistics = new StatisticsService(_habits, _profile);
+        Achievements = new AchievementService(_habits, _profile);
+    }
+
+    private void SaveAllData()
+    {
+        _storage.SaveHabits(new HabitStorageData
+        {
+            Folders = _folders,
+            Habits = _habits
+        });
+    }
+
+    public List<HabitFolder> GetFolders()
+    {
+        return _folders.OrderBy(f => f.Name).ToList();
+    }
+
+    public void CreateFolder(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return;
+
+        var folder = new HabitFolder
+        {
+            Id = _nextFolderId++,
+            Name = name,
+            DisplayOrder = _folders.Any() ? _folders.Max(f => f.DisplayOrder) + 1 : 0,
+            CreatedAt = DateTime.UtcNow
+        };
+        _folders.Add(folder);
+        SaveAllData();
+    }
+
+
+    public CreateHabitResult CreateHabit(string name, string description = "",
+        Difficulty difficulty = Difficulty.Normal,
+        Category category = Category.Personal,
+        int? folderId = null)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return new CreateHabitResult { Success = false, Message = "Habit name cannot be empty!" };
+        }
+        
+        int targetFolderId = folderId ?? (_folders.FirstOrDefault()?.Id ?? 1);
+
+        var habit = new Habit
+        {
+            Id = _nextId++,
+            Name = name,
+            Description = description,
+            CreatedAt = DateTime.Now,
+            CurrentStreak = 0,
+            LongestStreak = 0,
+            TotalXp = 0,
+            Difficulty = difficulty,
+            Category = category,
+            CompletedDates = new List<DateTime>(),
+            FolderId = targetFolderId
+        };
+
+        _habits.Add(habit);
+        SaveAllData();
+        
+        var newAchievements = Achievements.CheckAchievements();
+
+        return new CreateHabitResult
+        {
+            Success = true,
+            Message = $"Habit '{name}' created successfully! (ID: {habit.Id}).",
+            NewAchievements = newAchievements
+        };
+    }
+
+    public void MoveHabitToFolder(int habitId, int folderId)
+    {
+        var habit = _habits.FirstOrDefault(h => h.Id == habitId);
+        if (habit != null && _folders.Any(f => f.Id == folderId))
+        {
+            habit.FolderId = folderId;
+            SaveAllData();
+        }
+    }
+
+
+    public CompleteHabitResult CompleteHabit(int id)
+    {
+        var habit = _habits.FirstOrDefault(h => h.Id == id);
+
+        if (habit == null)
+            return new CompleteHabitResult { Success = false, Message = "Habit not Found." };
+
+        if (habit.IsCompletedToday())
+            return new CompleteHabitResult
+                { AlreadyCompleted = true, Message = $"You already completed '{habit.Name}' today!" };
+
+        habit.CompletedDates.Add(DateTime.Now);
+
+        var yesterday = DateTime.Today.AddDays(-1);
+        if (habit.CompletedDates.Any(d => d.Date == yesterday))
+            habit.CurrentStreak++;
+        else
+            habit.CurrentStreak = 1;
+
+        if (habit.CurrentStreak > habit.LongestStreak)
+            habit.LongestStreak = habit.CurrentStreak;
+
+        if (habit.LongestStreak > _profile.GlobalLongestStreak)
+            _profile.GlobalLongestStreak = habit.LongestStreak;
+
+        int xpEarned = (int)habit.Difficulty + (habit.CurrentStreak - 1);
+        habit.TotalXp += xpEarned;
+        _profile.TotalXp += xpEarned;
+
+        SaveAllData();
+        _storage.SaveProfile(_profile);
+
+        int totalXp = _profile.TotalXp;
+        int oldLevel = LevelSystem.CalculateLevel(totalXp - xpEarned);
+        int newLevel = LevelSystem.CalculateLevel(totalXp);
+
+        var newAchievements = Achievements.CheckAchievements();
+
+        return new CompleteHabitResult
+        {
+            Success = true,
+            XpEarned = xpEarned,
+            LeveledUp = newLevel > oldLevel,
+            NewLevel = newLevel,
+            NewAchievements = newAchievements
+        };
+    }
+
+    public DeleteHabitResult DeleteHabit(int id)
+    {
+        var habit = _habits.FirstOrDefault(h => h.Id == id);
+
+        if (habit == null)
+            return new DeleteHabitResult { Success = false, Message = "Habit not Found." };
+
+
+        _habits.Remove(habit);
+        SaveAllData();
+        return new DeleteHabitResult { Success = true, Message = $"Habit '{habit.Name}' Deleted." };
+    }
+
+
+    public List<Habit> GetHabits()
+    {
+        return _habits.OrderByDescending(h => h.CurrentStreak).ToList();
+    }
+
+    public List<Habit> GetHabitsByFolder(int folderId)
+    {
+        return _habits.Where(h => h.FolderId == folderId).OrderByDescending(h => h.CurrentStreak).ToList();
+    }
+
+    public int GetTotalXp()
+    {
+        return _profile.TotalXp;
+    }
+
+    public void UpdateProfile(UserProfile profile)
+    {
+        _profile = profile;
+        _storage.SaveProfile(_profile);
+    }
+}
+=== ARQUIVO: ./HabitTracker.Core/Services/LevelSystem.cs ===
+namespace HabitTracker.Core.Services;
+
+public static class LevelSystem
+{
+    /// Calcula quanto XP é necessário para COMPLETAR um nível específico
+    /// Exemplo: Nível 1 precisa de 100 XP, Nível 2 precisa de 300 XP
+    public static int GetXpRequiredForLevel(int level)
+    {
+        return (level * level * 50) + (level * 50);
+    }
+
+    /// Calcula o XP TOTAL acumulado necessário para CHEGAR em um nível
+    /// Exemplo: Para chegar no nível 3, precisa de 400 XP total (100 + 300)
+    public static int GetTotalXpForLevel(int level)
+    {
+        int totalXp = 0;
+
+        for (int i = 0; i < level; i++)
+        {
+            totalXp += GetXpRequiredForLevel(i);
+        }
+
+        return totalXp;
+    }
+
+    /// Descobre em qual NÍVEL/FASE você está baseado no seu XP total
+    /// Exemplo: Com 450 XP, você está no nível 3
+    public static int CalculateLevel(int totalXp)
+    {
+        int level = 1;
+        int xpAccumulated = 0;
+
+        while (true)
+        {
+            int XpForNextLevel = GetXpRequiredForLevel(level);
+
+            if (xpAccumulated + XpForNextLevel > totalXp)
+            {
+                return level;
+            }
+
+            xpAccumulated += XpForNextLevel;
+            level++;
+        }
+    }
+
+    public static readonly string[] LevelNames =
+    {
+        "Beginner", // Nível 1
+        "Apprentice", // Nível 2
+        "Intermediate", // Nível 3
+        "Advanced", // Nível 4
+        "Expert", // Nível 5
+        "Master", // Nível 6
+        "Grandmaster", // Nível 7
+        "Legend" // Nível 8
+    };
+
+    public static string GetLevelName(int level)
+    {
+        if (level <= 0)
+        {
+            return "None";
+        }
+
+        if (level > LevelNames.Length)
+        {
+            return "Beyond Legend";
+        }
+
+        return LevelNames[level - 1];
+    }
+
+    /// Retorna quanto XP é necessário para completar o nível atual
+    /// e avançar para o próximo
+    public static int GetXpForNextLevel(int currentLevel)
+    {
+        return GetXpRequiredForLevel(currentLevel);
+    }
+
+    /// Retorna quanto XP você já ganhou DENTRO do nível atual
+    /// Exemplo: 450 XP total no nível 3 = 50 XP de progresso (450 - 400)
+    public static int GetXpProgressInCurrentLevel(int totalXp, int currentLevel)
+    {
+        int xpAtStartOfLevel = GetTotalXpForLevel(currentLevel);
+
+        return totalXp - xpAtStartOfLevel;
+    }
+}
+=== ARQUIVO: ./HabitTracker.Core/Services/StatisticsService.cs ===
+using HabitTracker.Core.Models;
+
+namespace HabitTracker.Core.Services;
+
+public class StatisticsService
+{
+    private readonly List<Habit> _habits;
+    private readonly UserProfile _profile;
+
+    public StatisticsService(List<Habit> habits, UserProfile profile)
+    {
+        _habits = habits;
+        _profile =  profile;
+    }
+
+    public StatisticsResult GetStatistics()
+    {
+        int completedToday = _habits.Count(h => h.IsCompletedToday());
+        int totalXp = _profile.TotalXp;
+        int currentLevel = LevelSystem.CalculateLevel(totalXp);
+        string levelName = LevelSystem.GetLevelName(currentLevel);
+        int xpForNext = LevelSystem.GetXpForNextLevel(currentLevel);
+        int xpProgress = LevelSystem.GetXpProgressInCurrentLevel(totalXp, currentLevel);
+        int totalCompletions = _habits.Sum(h => h.CompletedDates.Count);
+        var bestStreak = _habits.MaxBy(h => h.CurrentStreak);
+
+        return new StatisticsResult
+        {
+            TotalHabits = _habits.Count,
+            CompletedToday = completedToday,
+            TotalXp = totalXp,
+            CurrentLevel = currentLevel,
+            LevelName = levelName,
+            XpForNext = xpForNext,
+            XpProgress = xpProgress,
+            TotalCompletions = totalCompletions,
+            BestStreak = bestStreak
+        };
+    }
+}
+=== ARQUIVO: ./HabitTracker.Desktop/App.axaml ===
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="HabitTracker.Desktop.App"
+             xmlns:local="using:HabitTracker.Desktop"
+             RequestedThemeVariant="Default">
+             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+
+    <Application.DataTemplates>
+        <local:ViewLocator/>
+    </Application.DataTemplates>
+  
+    <Application.Styles>
+        <FluentTheme />
+    </Application.Styles>
+</Application>
+=== ARQUIVO: ./HabitTracker.Desktop/App.axaml.cs ===
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Data.Core;
+using Avalonia.Data.Core.Plugins;
+using System.Linq;
+using Avalonia.Markup.Xaml;
+using HabitTracker.Desktop.ViewModels;
+using HabitTracker.Desktop.Views;
+
+namespace HabitTracker.Desktop;
+
+public partial class App : Application
+{
+    public override void Initialize()
+    {
+        AvaloniaXamlLoader.Load(this);
+    }
+
+    public override void OnFrameworkInitializationCompleted()
+    {
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            // Avoid duplicate validations from both Avalonia and the CommunityToolkit. 
+            // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
+            DisableAvaloniaDataAnnotationValidation();
+            desktop.MainWindow = new MainWindow
+            {
+                DataContext = new MainWindowViewModel(),
+            };
+        }
+
+        base.OnFrameworkInitializationCompleted();
+    }
+
+    private void DisableAvaloniaDataAnnotationValidation()
+    {
+        // Get an array of plugins to remove
+        var dataValidationPluginsToRemove =
+            BindingPlugins.DataValidators.OfType<DataAnnotationsValidationPlugin>().ToArray();
+
+        // remove each entry found
+        foreach (var plugin in dataValidationPluginsToRemove)
+        {
+            BindingPlugins.DataValidators.Remove(plugin);
+        }
+    }
+}
+=== ARQUIVO: ./HabitTracker.Desktop/Converters/BoolToOpacityConverter.cs ===
+using System;
+using System.Globalization;
+using Avalonia.Data.Converters;
+
+namespace HabitTracker.Desktop.Converters;
+
+public class BoolToOpacityConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool isUnlocked)
+            return isUnlocked ? 1.0 : 0.4;
+
+        return 1.0;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+=== ARQUIVO: ./HabitTracker.Desktop/Converters/CategoryDisplayConverter.cs ===
+using System;
+using System.Globalization;
+using Avalonia.Data.Converters;
+using HabitTracker.Core.Models;
+
+namespace HabitTracker.Desktop.Converters;
+
+public class CategoryDisplayConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is Category category)
+            return category.ToString();
+
+        return "All";
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+=== ARQUIVO: ./HabitTracker.Desktop/Converters/DifficultyBgConverter.cs ===
+using System;
+using System.Globalization;
+using Avalonia.Data.Converters;
+using Avalonia.Media;
+using HabitTracker.Core.Models;
+
+namespace HabitTracker.Desktop.Converters;
+
+public class DifficultyBgConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is not Difficulty difficulty)
+            return new SolidColorBrush(Color.Parse("#1f1f22"));
+
+        return difficulty switch
+        {
+            Difficulty.Easy => new SolidColorBrush(Color.Parse("#152a1e")),
+            Difficulty.Normal => new SolidColorBrush(Color.Parse("#1a2640")),
+            Difficulty.Hard => new SolidColorBrush(Color.Parse("#3a1212")),
+            Difficulty.Legendary => new SolidColorBrush(Color.Parse("#3a2a0a")),
+            _ => new SolidColorBrush(Color.Parse("#1f1f22"))
+        };
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+=== ARQUIVO: ./HabitTracker.Desktop/Converters/DifficultyColorConverter.cs ===
+using System;
+using System.Globalization;
+using Avalonia.Data.Converters;
+using Avalonia.Media;
+using HabitTracker.Core.Models;
+
+namespace HabitTracker.Desktop.Converters;
+
+public class DifficultyColorConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is not Difficulty difficulty)
+            return new SolidColorBrush(Color.Parse("#94a3b8"));
+
+        return difficulty switch
+        {
+            Difficulty.Easy => new SolidColorBrush(Color.Parse("#3bb478")),
+            Difficulty.Normal => new SolidColorBrush(Color.Parse("#3b82f6")),
+            Difficulty.Hard => new SolidColorBrush(Color.Parse("#ef4444")),
+            Difficulty.Legendary => new SolidColorBrush(Color.Parse("#f59e0b")),
+            _ => new SolidColorBrush(Color.Parse("#94a3b8"))
+        };
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+=== ARQUIVO: ./HabitTracker.Desktop/Converters/HabitDoneLabelConverter.cs ===
+using System;
+using System.Globalization;
+using Avalonia.Data.Converters;
+using HabitTracker.Core.Models;
+
+namespace HabitTracker.Desktop.Converters;
+
+public class HabitDoneLabelConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var completed = value is Habit h && h.IsCompletedToday();
+        return completed ? "✓ Done" : "○ Complete";
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+=== ARQUIVO: ./HabitTracker.Desktop/Converters/HabitStatusAccentConverter.cs ===
+using System;
+using System.Globalization;
+using Avalonia.Data.Converters;
+using Avalonia.Media;
+using HabitTracker.Core.Models;
+
+namespace HabitTracker.Desktop.Converters;
+
+public class HabitStatusAccentConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var completed = value is Habit h && h.IsCompletedToday();
+        return completed
+            ? new SolidColorBrush(Color.Parse("#22c55e"))
+            : new SolidColorBrush(Color.Parse("#ef4444"));
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+=== ARQUIVO: ./HabitTracker.Desktop/Converters/TabActiveBackgroundConverter.cs ===
+using System;
+using System.Globalization;
+using Avalonia.Data.Converters;
+using Avalonia.Media;
+using HabitTracker.Desktop.Models;
+
+namespace HabitTracker.Desktop.Converters;
+
+public class TabActiveBackgroundConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is ActiveTab currentTab && parameter is string tabName &&
+            Enum.TryParse<ActiveTab>(tabName, out var targetTab))
+        {
+            return currentTab == targetTab
+                ? new SolidColorBrush(Color.Parse("#18000000"))
+                : Brushes.Transparent;
+        }
+
+        return Brushes.Transparent;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+=== ARQUIVO: ./HabitTracker.Desktop/Converters/TabActiveForegroundConverter.cs ===
+using System;
+using System.Globalization;
+using Avalonia.Data.Converters;
+using Avalonia.Media;
+using HabitTracker.Desktop.Models;
+
+namespace HabitTracker.Desktop.Converters;
+
+public class TabActiveForegroundConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is ActiveTab currentTab && parameter is string tabName &&
+            Enum.TryParse<ActiveTab>(tabName, out var targetTab))
+        {
+            return currentTab == targetTab
+                ? new SolidColorBrush(Color.Parse("#8b5cf6"))
+                : new SolidColorBrush(Color.Parse("#64748b"));
+        }
+
+        return new SolidColorBrush(Color.Parse("#64748b"));
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+=== ARQUIVO: ./HabitTracker.Desktop/Converters/TabVisibilityConverter.cs ===
+using System;
+using System.Globalization;
+using Avalonia.Data.Converters;
+using HabitTracker.Desktop.Models;
+
+namespace HabitTracker.Desktop.Converters;
+
+public class TabVisibilityConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is ActiveTab currentTab && parameter is string tabName)
+            return currentTab.ToString() == tabName;
+
+        return false;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+=== ARQUIVO: ./HabitTracker.Desktop/Models/ActiveTab.cs ===
+namespace HabitTracker.Desktop.Models;
+
+public enum ActiveTab
+{
+    Habits,
+    Achievements,
+    Profile,
+    Statistics
+}
+=== ARQUIVO: ./HabitTracker.Desktop/Models/SelectableAchievement.cs ===
+using System;
+using CommunityToolkit.Mvvm.ComponentModel;
+using HabitTracker.Core.Models;
+
+namespace HabitTracker.Desktop.Models;
+
+public partial class SelectableAchievement : ObservableObject
+{
+    public Achievement Achievement { get; }
+    
+    [ObservableProperty] private bool _isSelected;
+    
+    private readonly Func<bool> _canSelectMore;
+
+    public SelectableAchievement(Achievement achievement, bool isSelected, Func<bool> canSelectMore)
+    {
+        Achievement = achievement;
+        _isSelected = isSelected;
+        _canSelectMore = canSelectMore;
+    }
+    
+    /// Pode ser clicado se JÁ está selecionado (para desmarcar)
+    /// OU se o limite ainda não foi atingido (para marcar).
+    public bool CanToggle => _isSelected || _canSelectMore();
+    
+    /// Chamado pelo ViewModel após cada toggle para avisar a UI.
+    public void NotifyCanToggleChanged()  => OnPropertyChanged(nameof(CanToggle));
+    
+}
+=== ARQUIVO: ./HabitTracker.Desktop/Program.cs ===
+﻿using Avalonia;
+using System;
+
+namespace HabitTracker.Desktop;
+
+sealed class Program
+{
+    // Initialization code. Don't use any Avalonia, third-party APIs or any
+    // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
+    // yet and stuff might break.
+    [STAThread]
+    public static void Main(string[] args) => BuildAvaloniaApp()
+        .StartWithClassicDesktopLifetime(args);
+
+    // Avalonia configuration, don't remove; also used by visual designer.
+    public static AppBuilder BuildAvaloniaApp()
+        => AppBuilder.Configure<App>()
+            .UsePlatformDetect()
+            .WithInterFont()
+            .LogToTrace();
+}
+
+=== ARQUIVO: ./HabitTracker.Desktop/ViewLocator.cs ===
+using System;
+using System.Diagnostics.CodeAnalysis;
+using Avalonia.Controls;
+using Avalonia.Controls.Templates;
+using HabitTracker.Desktop.ViewModels;
+
+namespace HabitTracker.Desktop;
+
+/// <summary>
+/// Given a view model, returns the corresponding view if possible.
+/// </summary>
+[RequiresUnreferencedCode(
+    "Default implementation of ViewLocator involves reflection which may be trimmed away.",
+    Url = "https://docs.avaloniaui.net/docs/concepts/view-locator")]
+public class ViewLocator : IDataTemplate
+{
+    public Control? Build(object? param)
+    {
+        if (param is null)
+            return null;
+        
+        var name = param.GetType().FullName!.Replace("ViewModel", "View", StringComparison.Ordinal);
+        var type = Type.GetType(name);
+
+        if (type != null)
+        {
+            return (Control)Activator.CreateInstance(type)!;
+        }
+        
+        return new TextBlock { Text = "Not Found: " + name };
+    }
+
+    public bool Match(object? data)
+    {
+        return data is ViewModelBase;
+    }
+}
+
+=== ARQUIVO: ./HabitTracker.Desktop/ViewModels/CreateHabitViewModel.cs ===
+using System;
+using System.Collections.Generic;
+using Avalonia.Controls;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using HabitTracker.Core.Models;
+
+namespace HabitTracker.Desktop.ViewModels;
+
+public partial class CreateHabitViewModel : ViewModelBase
+{
+    [ObservableProperty] private string _name = "";
+    [ObservableProperty] private string _description = "";
+    [ObservableProperty] private Difficulty _difficulty = Difficulty.Normal;
+    [ObservableProperty] private Category _category = Category.Personal;
+
+    public IEnumerable<Difficulty> Difficulties => Enum.GetValues<Difficulty>();
+    public IEnumerable<Category> Categories => Enum.GetValues<Category>();
+
+    public bool Confirmed { get; set; }
+    private Window? _window;
+    public void SetWindow(Window window) => _window = window;
+
+    [RelayCommand]
+    private void Confirm()
+    {
+        if (string.IsNullOrWhiteSpace(Name)) return;
+        Confirmed = true;
+        _window?.Close();
+    }
+
+    [RelayCommand]
+    private void Cancel() => _window?.Close();
+}
+=== ARQUIVO: ./HabitTracker.Desktop/ViewModels/EditProfileViewModel.cs ===
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using HabitTracker.Core.Models;
+using HabitTracker.Desktop.Models;
+
+namespace HabitTracker.Desktop.ViewModels;
+
+public partial class EditProfileViewModel : ViewModelBase
+{
+    [ObservableProperty] private string _userName = string.Empty;
+    [ObservableProperty] private string _description = string.Empty;
+    [ObservableProperty] private Gender _gender = Gender.Unknown;
+    [ObservableProperty] private DateTimeOffset? _dateOfBirth;
+
+    public bool Confirmed { get; private set; }
+    public List<Gender> Genders { get; } = Enum.GetValues<Gender>().ToList();
+    public ObservableCollection<SelectableAchievement> UnlockedAchievements { get; } = new();
+
+    public List<AchievementType> FeaturedAchievements => UnlockedAchievements
+        .Where(a => a.IsSelected)
+        .Select(a => a.Achievement.Type)
+        .ToList();
+
+    public EditProfileViewModel(UserProfile profile, List<Achievement> allAchievements)
+    {
+        UserName = profile.UserName;
+        Description = profile.Description;
+        Gender = profile.Gender;
+        DateOfBirth = profile.DateOfBirth.HasValue ? new DateTimeOffset(profile.DateOfBirth.Value) : null;
+
+        var unlocked = allAchievements.Where(a => a.IsUnlocked);
+        foreach (var achievement in unlocked)
+        {
+            var isSelected = profile.FeaturedAchievements.Contains(achievement.Type);
+            UnlockedAchievements.Add(new SelectableAchievement(achievement, isSelected, (() =>  CanSelectMore)));
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleAchievement(SelectableAchievement item)
+    {
+        if (item.IsSelected)
+        {
+            item.IsSelected = false;
+        }
+        else
+        {
+            int selectedCount = UnlockedAchievements.Count(a => a.IsSelected);
+            if (selectedCount >= 3) return;
+            item.IsSelected = true;
+        }
+
+        OnPropertyChanged(nameof(CanSelectMore));
+
+        foreach (var a in UnlockedAchievements)
+        {
+            a.NotifyCanToggleChanged();
+        }
+    }
+
+    public bool CanSelectMore => UnlockedAchievements.Count(a => a.IsSelected) < 3;
+
+    [RelayCommand]
+    private void Confirm()
+    {
+        Confirmed = true;
+        Close?.Invoke();
+    }
+
+    [RelayCommand]
+    private void Cancel()
+    {
+        Confirmed = false;
+        Close?.Invoke();
+    }
+
+    public Action? Close { get; set; }
+}
+=== ARQUIVO: ./HabitTracker.Desktop/ViewModels/KanbanColumnViewModel.cs ===
+using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
+using HabitTracker.Core.Models;
+
+namespace HabitTracker.Desktop.ViewModels;
+
+public partial class KanbanColumnViewModel : ViewModelBase
+{
+    public int Id { get; }
+    public string Title { get; }
+
+    public ObservableCollection<Habit> Habits { get; } = new();
+
+    public KanbanColumnViewModel(int id, string title)
+    {
+        Id = id;
+        Title = title;
+    }
+}
+=== ARQUIVO: ./HabitTracker.Desktop/ViewModels/MainWindowViewModel.cs ===
+﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using HabitTracker.Core.Models;
+using HabitTracker.Core.Services;
+using HabitTracker.Desktop.Views;
+using MsBox.Avalonia;
+using MsBox.Avalonia.Enums;
+using HabitTracker.Desktop.Models;
+
+namespace HabitTracker.Desktop.ViewModels;
+
+public partial class MainWindowViewModel : ViewModelBase
+{
+    private readonly HabitService _habitService;
+
+    public ObservableCollection<KanbanColumnViewModel> KanbanColumns { get; } = new();
+
+
+    [ObservableProperty] private int _level;
+    [ObservableProperty] private string _levelName = string.Empty;
+    [ObservableProperty] private int _currentXp;
+    [ObservableProperty] private int _xpInCurrentLevel;
+    [ObservableProperty] private int _xpForNextLevel;
+    [ObservableProperty] private Category? _selectedCategory;
+    [ObservableProperty] private ActiveTab _activeTab = ActiveTab.Habits;
+    [ObservableProperty] private string _profileUserName = string.Empty;
+    [ObservableProperty] private string _profileDescription = string.Empty;
+    [ObservableProperty] private string _profileGender = string.Empty;
+    [ObservableProperty] private string _profileDateOfBirth = string.Empty;
+    [ObservableProperty] private string _profileMemberSince = string.Empty;
+    [ObservableProperty] private int _globalLongestStreak;
+    [ObservableProperty] private int _statTotalHabits;
+    [ObservableProperty] private int _statCompletedToday;
+    [ObservableProperty] private int _statTotalXp;
+    [ObservableProperty] private int _statCurrentLevel;
+    [ObservableProperty] private string _statLevelName = string.Empty;
+    [ObservableProperty] private int _statXpForNext;
+    [ObservableProperty] private int _statXpProgress;
+    [ObservableProperty] private int _statTotalCompletions;
+    [ObservableProperty] private string _statBestStreakName = "No habits yet";
+    [ObservableProperty] private int _statBestStreakDays;
+    public ObservableCollection<Achievement> Achievements { get; } = new();
+
+    private List<Habit> _allHabits = new();
+
+    public MainWindowViewModel()
+    {
+        if (Design.IsDesignMode)
+        {
+            _habitService = null!;
+            return;
+        }
+    
+        _habitService = new HabitService();
+        LoadHabits();
+    }
+
+    private void LoadHabits()
+    {
+        _allHabits = _habitService.GetHabits();
+
+        if (KanbanColumns.Count == 0)
+        {
+            KanbanColumns.Add(new KanbanColumnViewModel(1, "To-Do"));
+            KanbanColumns.Add(new KanbanColumnViewModel(2, "In-Progress"));
+            KanbanColumns.Add(new KanbanColumnViewModel(3, "Done"));
+        }
+
+        ApplyFilter();
+
+        int totalXp = _habitService.GetProfile().TotalXp;
+        Level = LevelSystem.CalculateLevel(totalXp);
+        LevelName = LevelSystem.GetLevelName(Level);
+        CurrentXp = totalXp;
+        XpInCurrentLevel = LevelSystem.GetXpProgressInCurrentLevel(totalXp, Level);
+        XpForNextLevel = LevelSystem.GetXpForNextLevel(Level);
+        Achievements.Clear();
+        foreach (var achievement in _habitService.Achievements.GetAllAchievements())
+            Achievements.Add(achievement);
+
+        LoadProfile();
+        LoadStatistics();
+    }
+
+    [RelayCommand]
+    private async Task CompleteHabit(Habit habit)
+    {
+        var result = _habitService.CompleteHabit(habit.Id);
+        LoadHabits();
+
+        if (result.AlreadyCompleted)
+        {
+            var box = MessageBoxManager.GetMessageBoxStandard(
+                "Already Done!",
+                $"'{habit.Name}' already completed today!",
+                ButtonEnum.Ok);
+            await box.ShowAsync();
+            return;
+        }
+
+        if (result.LeveledUp)
+        {
+            var box = MessageBoxManager.GetMessageBoxStandard(
+                "🎉 Level Up!",
+                $"You reached Level {result.NewLevel} - {LevelSystem.GetLevelName(result.NewLevel)}!",
+                ButtonEnum.Ok);
+            await box.ShowAsync();
+        }
+
+        await ShowAchievementPopups(result.NewAchievements);
+    }
+
+    [RelayCommand]
+    private async Task OpenCreateHabit()
+    {
+        var mainWindow = (Application.Current?.ApplicationLifetime
+            as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+
+        if (mainWindow == null) return;
+
+        var viewModel = new CreateHabitViewModel();
+        var dialog = new CreateHabitDialog { DataContext = viewModel };
+
+        await dialog.ShowDialog(mainWindow);
+
+        if (viewModel.Confirmed)
+        {
+            var result = _habitService.CreateHabit(viewModel.Name, viewModel.Description, viewModel.Difficulty,
+                viewModel.Category);
+
+            LoadHabits();
+
+            await ShowAchievementPopups(result.NewAchievements);
+        }
+    }
+
+    [RelayCommand]
+    private async Task DeleteHabit(Habit habit)
+    {
+        var box = MessageBoxManager.GetMessageBoxStandard(
+            "Delete Habit",
+            $"Are you sure you want to delete '{habit.Name}'?",
+            ButtonEnum.YesNo);
+
+        var result = await box.ShowAsync();
+
+        if (result == ButtonResult.Yes)
+        {
+            _habitService.DeleteHabit(habit.Id);
+            LoadHabits();
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenHabitHistory(Habit habit)
+    {
+        var mainWindow = (Application.Current?.ApplicationLifetime
+            as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+
+        if (mainWindow == null) return;
+
+        var dialog = new HabitHistoryDialog(habit);
+        await dialog.ShowDialog(mainWindow);
+    }
+
+    [RelayCommand]
+    private void ShowTab(ActiveTab tab) => ActiveTab = tab;
+
+    private async Task ShowAchievementPopups(List<Achievement> achievements)
+    {
+        foreach (var achievement in achievements)
+        {
+            var box = MessageBoxManager.GetMessageBoxStandard("🏆 Achievement Unlocked!",
+                $"{achievement.Icon} {achievement.Name}\n{achievement.Description}",
+                ButtonEnum.Ok);
+            await box.ShowAsync();
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenEditProfile()
+    {
+        var mainWindow = (Application.Current?.ApplicationLifetime
+            as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+
+        if (mainWindow == null) return;
+
+        var profile = _habitService.GetProfile();
+        var viewModel = new EditProfileViewModel(profile, _habitService.Achievements.GetAllAchievements());
+        var dialog = new EditProfileDialog(viewModel);
+
+        await dialog.ShowDialog(mainWindow);
+
+        if (viewModel.Confirmed)
+        {
+            profile.UserName = viewModel.UserName;
+            profile.Description = viewModel.Description;
+            profile.Gender = viewModel.Gender;
+            profile.DateOfBirth = viewModel.DateOfBirth?.DateTime;
+            profile.FeaturedAchievements = viewModel.FeaturedAchievements;
+
+            _habitService.UpdateProfile(profile);
+            LoadProfile();
+        }
+    }
+
+    public List<Category?> Categories { get; } = new()
+    {
+        null,
+        Category.Health,
+        Category.Study,
+        Category.Work,
+        Category.Personal
+    };
+
+    private void ApplyFilter()
+    {
+        foreach (var column in KanbanColumns)
+        {
+            column.Habits.Clear();
+        }
+
+        var filteredHabits = SelectedCategory == null
+            ? _allHabits
+            : _allHabits.Where(h => h.Category == SelectedCategory);
+
+        foreach (var habit in filteredHabits)
+        {
+            int targetFolder = habit.FolderId > 0 ? habit.FolderId : 1;
+
+            var targetColumn = KanbanColumns.FirstOrDefault(c => c.Id == targetFolder);
+            if (targetColumn != null)
+            {
+                targetColumn.Habits.Add(habit);
+            }
+        }
+    }
+
+    partial void OnSelectedCategoryChanged(Category? value)
+    {
+        ApplyFilter();
+    }
+
+    private void LoadProfile()
+    {
+        var profile = _habitService.GetProfile();
+        ProfileUserName = string.IsNullOrEmpty(profile.UserName) ? "No name set" : profile.UserName;
+        ProfileDescription = string.IsNullOrEmpty(profile.Description) ? "No description set" : profile.Description;
+        ProfileGender = profile.Gender == Gender.Unknown ? "Not specified" : profile.Gender.ToString();
+        ProfileDateOfBirth = profile.DateOfBirth.HasValue
+            ? profile.DateOfBirth.Value.ToString("dd/MM/yyyy")
+            : "Not specified";
+        ProfileMemberSince = profile.DateCreated.ToString("dd/MM/yyyy");
+        GlobalLongestStreak = profile.GlobalLongestStreak;
+    }
+
+    private void LoadStatistics()
+    {
+        var stats = _habitService.Statistics.GetStatistics();
+
+        StatTotalHabits = stats.TotalHabits;
+        StatCompletedToday = stats.CompletedToday;
+        StatTotalXp = stats.TotalXp;
+        StatCurrentLevel = stats.CurrentLevel;
+        StatLevelName = stats.LevelName;
+        StatXpForNext = stats.XpForNext;
+        StatXpProgress = stats.XpProgress;
+        StatTotalCompletions = stats.TotalCompletions;
+
+        StatBestStreakName = stats.BestStreak?.Name ?? "No habits yet";
+        StatBestStreakDays = stats.BestStreak?.CurrentStreak ?? 0;
+    }
+}
+=== ARQUIVO: ./HabitTracker.Desktop/ViewModels/ViewModelBase.cs ===
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+
+namespace HabitTracker.Desktop.ViewModels;
+
+public abstract class ViewModelBase : ObservableObject
+{
+}
+
+=== ARQUIVO: ./HabitTracker.Desktop/Views/CreateHabitDialog.axaml ===
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:HabitTracker.Desktop.ViewModels"
+        x:Class="HabitTracker.Desktop.Views.CreateHabitDialog"
+        x:DataType="vm:CreateHabitViewModel"
+        Title="Create Habit"
+        Width="400" Height="365"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+    <ScrollViewer>
+
+        <StackPanel Margin="24" Spacing="12">
+
+            <TextBlock Text="Habit Name" Foreground="White" />
+            <TextBox Text="{Binding Name}" Watermark="Ex: Exercise, Read, Meditate..." />
+
+            <TextBlock Text="Description (optional)" Foreground="White" />
+            <TextBox Text="{Binding Description}" Watermark="Ex: 30 minutes of running" />
+
+            <TextBlock Text="Difficulty" Foreground="White" />
+            <ComboBox ItemsSource="{Binding Difficulties}"
+                      SelectedItem="{Binding Difficulty}"
+                      HorizontalAlignment="Stretch" />
+
+            <TextBlock Text="Category" Foreground="White" />
+            <ComboBox ItemsSource="{Binding Categories}"
+                      SelectedItem="{Binding Category}"
+                      HorizontalAlignment="Stretch" />
+
+            <Button Content="Create"
+                    Command="{Binding ConfirmCommand}"
+                    HorizontalAlignment="Stretch"
+                    Margin="0,8,0,0" />
+
+
+            <Button Content="Cancel"
+                    Command="{Binding CancelCommand}"
+                    HorizontalAlignment="Stretch"
+                    Background="Transparent"
+                    Foreground="#a0a0c0" />
+
+        </StackPanel>
+    </ScrollViewer>
+
+</Window>
+=== ARQUIVO: ./HabitTracker.Desktop/Views/CreateHabitDialog.axaml.cs ===
+using Avalonia.Controls;
+
+namespace HabitTracker.Desktop.Views;
+
+public partial class CreateHabitDialog : Window
+{
+    public CreateHabitDialog()
+    {
+        InitializeComponent();
+        DataContextChanged += (_, _) =>
+        {
+            if (DataContext is ViewModels.CreateHabitViewModel vm)
+            {
+                vm.SetWindow(this);
+            }
+        };
+    }
+}
+=== ARQUIVO: ./HabitTracker.Desktop/Views/EditProfileDialog.axaml ===
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:HabitTracker.Desktop.ViewModels"
+        xmlns:models="using:HabitTracker.Core.Models"
+        xmlns:models1="clr-namespace:HabitTracker.Desktop.Models"
+
+        x:Class="HabitTracker.Desktop.Views.EditProfileDialog"
+        x:DataType="vm:EditProfileViewModel"
+        Title="Edit Profile"
+        Background="#1a1a2e"
+        Width="400" Height="580"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+
+    <ScrollViewer>
+
+        <StackPanel Margin="24" Spacing="16">
+
+            <TextBlock Text="Edit Profile"
+                       FontSize="20" FontWeight="Bold"
+                       Foreground="White" />
+
+            <StackPanel Spacing="4">
+                <TextBlock Text="Name" Foreground="#a0a0c0" FontSize="12" />
+                <TextBox Text="{Binding UserName}"
+                         Background="#16213e"
+                         Foreground="White"
+                         CornerRadius="6"
+                         Padding="10,8" />
+            </StackPanel>
+
+            <StackPanel Spacing="4">
+                <TextBlock Text="Description" Foreground="#a0a0c0" FontSize="12" />
+                <TextBox Text="{Binding Description}"
+                         Background="#16213e"
+                         Foreground="White"
+                         CornerRadius="6"
+                         Padding="10,8"
+                         Height="80"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+
+            <StackPanel Spacing="4">
+                <TextBlock Text="Gender" Foreground="#a0a0c0" FontSize="12" />
+                <ComboBox ItemsSource="{Binding Genders}"
+                          SelectedItem="{Binding Gender}"
+                          HorizontalAlignment="Stretch"
+                          Background="#16213e"
+                          Foreground="White" />
+            </StackPanel>
+
+            <StackPanel Spacing="4">
+                <TextBlock Text="Date of Birth" Foreground="#a0a0c0" FontSize="12" />
+                <DatePicker SelectedDate="{Binding DateOfBirth}"
+                            Background="#16213e"
+                            Foreground="White" />
+            </StackPanel>
+
+            <StackPanel Spacing="4">
+                <TextBlock Text="Featured Achievements (max 3)"
+                           Foreground="#a0a0c0" FontSize="12" />
+                <TextBlock Text="Select up to 3 achievements to highlight on your profile."
+                           Foreground="#666688" FontSize="11" />
+                <ItemsControl ItemsSource="{Binding UnlockedAchievements}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="models1:SelectableAchievement">
+                            <Border Background="#0f3460"
+                                    CornerRadius="6"
+                                    Padding="10,8"
+                                    Margin="0,0,0,6"
+                                    Cursor="Hand">
+                                <Border.Styles>
+                                    <Style Selector="Border:pointerover">
+                                        <Setter Property="Background" Value="#1a4a80" />
+                                    </Style>
+                                </Border.Styles>
+                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                    <TextBlock Grid.Column="0"
+                                               Text="{Binding Achievement.Icon}"
+                                               FontSize="18"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,10,0" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Achievement.Name}"
+                                                   FontSize="13" FontWeight="Bold"
+                                                   Foreground="White" />
+                                        <TextBlock Text="{Binding Achievement.Description}"
+                                                   FontSize="11"
+                                                   Foreground="#a0a0c0" />
+                                    </StackPanel>
+                                    <CheckBox Grid.Column="2"
+                                              IsChecked="{Binding IsSelected, Mode=OneWay}"
+                                              IsEnabled="{Binding CanToggle}"
+                                              Command="{ReflectionBinding $parent[Window].DataContext.ToggleAchievementCommand}"
+                                              CommandParameter="{Binding}"
+                                              VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+
+            <Grid ColumnDefinitions="*,*" Margin="0,8,0,0">
+                <Button Grid.Column="0"
+                        Content="Cancel"
+                        Command="{Binding CancelCommand}"
+                        Background="#444466"
+                        Foreground="White"
+                        CornerRadius="6"
+                        HorizontalAlignment="Stretch"
+                        Padding="12,8"
+                        Margin="0,0,8,0" />
+                <Button Grid.Column="1"
+                        Content="Save"
+                        Command="{Binding ConfirmCommand}"
+                        Background="#e94560"
+                        Foreground="White"
+                        CornerRadius="6"
+                        HorizontalAlignment="Stretch"
+                        Padding="12,8" />
+            </Grid>
+
+        </StackPanel>
+    </ScrollViewer>
+
+</Window>
+=== ARQUIVO: ./HabitTracker.Desktop/Views/EditProfileDialog.axaml.cs ===
+using Avalonia.Controls;
+using HabitTracker.Desktop.ViewModels;
+
+namespace HabitTracker.Desktop.Views;
+
+public partial class EditProfileDialog : Window
+{
+    public EditProfileDialog()
+    {
+        InitializeComponent();
+    }
+
+    public EditProfileDialog(EditProfileViewModel viewModel) : this()
+    {
+        DataContext = viewModel;
+        viewModel.Close = Close;
+    }
+    
+}
+=== ARQUIVO: ./HabitTracker.Desktop/Views/HabitHistoryDialog.axaml ===
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:models="using:HabitTracker.Core.Models"
+        x:Class="HabitTracker.Desktop.Views.HabitHistoryDialog"
+        x:DataType="models:Habit"
+        Title="Habit History"
+        Width="400" Height="450"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+
+    <ScrollViewer>
+        <StackPanel Margin="24" Spacing="12">
+            <TextBlock Text="{Binding Name}"
+                          FontSize="20" FontWeight="Bold"
+                          Foreground="White"/>
+
+            <TextBlock FontSize="12" Foreground="#a0a0c0">
+                <Run Text="Total completions: "/>
+                <Run Text="{Binding CompletedDates.Count}"/>
+            </TextBlock>
+
+            <Separator Margin="0,8"/>
+
+            <ItemsControl ItemsSource="{Binding CompletedDates}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding StringFormat='✓ {0:dd/MM/yyyy HH:mm}'}"
+                                   Foreground="White"
+                                   Margin="0,4"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+
+</Window>
+=== ARQUIVO: ./HabitTracker.Desktop/Views/HabitHistoryDialog.axaml.cs ===
+using Avalonia.Controls;
+using HabitTracker.Core.Models;
+
+namespace HabitTracker.Desktop.Views;
+
+public partial class HabitHistoryDialog : Window
+{
+    public HabitHistoryDialog()
+    {
+        InitializeComponent();
+    }
+
+    public HabitHistoryDialog(Habit habit) : this()
+    {
+        DataContext = habit;
+    }
+}
+=== ARQUIVO: ./HabitTracker.Desktop/Views/MainWindow.axaml ===
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:HabitTracker.Desktop.ViewModels"
+        xmlns:models="using:HabitTracker.Core.Models"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:converters="using:HabitTracker.Desktop.Converters"
+        xmlns:desktopModels="clr-namespace:HabitTracker.Desktop.Models"
+        mc:Ignorable="d"
+        d:DesignWidth="800"
+        d:DesignHeight="600"
+        x:Class="HabitTracker.Desktop.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="HabitTracker"
+        Background="{StaticResource ColorBg}"
+        MinWidth="800"
+        MinHeight="600">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel />
+    </Design.DataContext>
+
+    <Window.Resources>
+        <converters:CategoryDisplayConverter x:Key="CategoryDisplayConverter" />
+        <converters:TabVisibilityConverter x:Key="TabVisibilityConverter" />
+        <converters:BoolToOpacityConverter x:Key="BoolToOpacityConverter" />
+        <converters:TabActiveBackgroundConverter x:Key="TabActiveBackgroundConverter" />
+        <converters:TabActiveForegroundConverter x:Key="TabActiveForegroundConverter" />
+        <converters:DifficultyColorConverter x:Key="DifficultyColorConverter" />
+        <converters:DifficultyBgConverter x:Key="DifficultyBgConverter" />
+        <converters:HabitStatusAccentConverter x:Key="HabitStatusAccentConverter" />
+        <converters:HabitDoneLabelConverter x:Key="HabitDoneLabelConverter" />
+
+        <SolidColorBrush x:Key="ColorBg">#0a0a0b</SolidColorBrush>
+        <SolidColorBrush x:Key="ColorSurface">#141416</SolidColorBrush>
+        <SolidColorBrush x:Key="ColorSurfaceAlt">#1f1f22</SolidColorBrush>
+        <SolidColorBrush x:Key="ColorAccent">#8b5cf6</SolidColorBrush>
+        <SolidColorBrush x:Key="ColorAccentAlt">#7c3aed</SolidColorBrush>
+        <SolidColorBrush x:Key="ColorGold">#f59e0b</SolidColorBrush>
+        <SolidColorBrush x:Key="ColorTextPrimary">#f1f5f9</SolidColorBrush>
+        <SolidColorBrush x:Key="ColorTextSecondary">#94a3b8</SolidColorBrush>
+        <SolidColorBrush x:Key="ColorDanger">#b24b57</SolidColorBrush>
+        <SolidColorBrush x:Key="ColorBorder">#1AFFFFFF</SolidColorBrush>
+
+        <CornerRadius x:Key="RadiusSm">8</CornerRadius>
+        <CornerRadius x:Key="RadiusMd">12</CornerRadius>
+        <CornerRadius x:Key="RadiusLg">16</CornerRadius>
+        <Thickness x:Key="PadButton">12,8</Thickness>
+        <Thickness x:Key="PadCard">20</Thickness>
+    </Window.Resources>
+
+    <Window.Styles>
+        <Style Selector="Button.nav">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource ColorTextSecondary}" />
+            <Setter Property="Padding" Value="{StaticResource PadButton}" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.nav:pointerover">
+            <Setter Property="Background" Value="#0DFFFFFF" />
+            <Setter Property="Foreground" Value="{StaticResource ColorTextPrimary}" />
+        </Style>
+
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{StaticResource ColorAccent}" />
+            <Setter Property="Foreground" Value="#ffffff" />
+            <Setter Property="CornerRadius" Value="{StaticResource RadiusSm}" />
+            <Setter Property="Padding" Value="{StaticResource PadButton}" />
+            <Setter Property="BorderBrush" Value="{StaticResource ColorAccent}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+        <Style Selector="Button.primary:pointerover">
+            <Setter Property="Background" Value="{StaticResource ColorAccentAlt}" />
+        </Style>
+
+        <Style Selector="Button.secondary">
+            <Setter Property="Background" Value="#0DFFFFFF" />
+            <Setter Property="Foreground" Value="{StaticResource ColorTextSecondary}" />
+            <Setter Property="CornerRadius" Value="{StaticResource RadiusSm}" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="BorderBrush" Value="{StaticResource ColorBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style Selector="Button.secondary:pointerover">
+            <Setter Property="Background" Value="#14FFFFFF" />
+            <Setter Property="Foreground" Value="{StaticResource ColorTextPrimary}" />
+        </Style>
+
+        <Style Selector="Button.danger">
+            <Setter Property="Background" Value="{StaticResource ColorDanger}" />
+            <Setter Property="Foreground" Value="{StaticResource ColorTextPrimary}" />
+            <Setter Property="CornerRadius" Value="{StaticResource RadiusSm}" />
+            <Setter Property="Padding" Value="{StaticResource PadButton}" />
+            <Setter Property="BorderBrush" Value="{StaticResource ColorDanger}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style Selector="Button.danger:pointerover">
+            <Setter Property="Background" Value="#c45864" />
+        </Style>
+
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="{StaticResource ColorSurface}" />
+            <Setter Property="CornerRadius" Value="{StaticResource RadiusLg}" />
+            <Setter Property="BorderBrush" Value="{StaticResource ColorBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style Selector="TextBlock.title">
+            <Setter Property="Foreground" Value="{StaticResource ColorTextPrimary}" />
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+
+        <Style Selector="TextBlock.subtle">
+            <Setter Property="Foreground" Value="{StaticResource ColorTextSecondary}" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel Margin="20">
+
+        <!-- Header fixo no topo -->
+        <Border DockPanel.Dock="Top"
+                Padding="0,0,0,18"
+                BorderBrush="{StaticResource ColorBorder}"
+                BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="*,Auto">
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="🎯 HabitTracker"
+                               FontSize="24"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource ColorTextPrimary}" />
+                    <TextBlock Text="{Binding LevelName}"
+                               FontSize="14"
+                               Foreground="{StaticResource ColorTextSecondary}" />
+                </StackPanel>
+
+                <Border Grid.Column="1" Classes="card" Padding="16,12" VerticalAlignment="Center">
+                    <StackPanel Spacing="6">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock FontSize="12" Classes="subtle" Text="{Binding LevelName}" />
+                            <TextBlock Grid.Column="1" FontSize="12" FontWeight="Bold"
+                                       Foreground="{StaticResource ColorTextPrimary}">
+                                <Run Text="Lv. " />
+                                <Run Text="{Binding Level}" />
+                            </TextBlock>
+                        </Grid>
+                        <ProgressBar Minimum="0"
+                                     Maximum="{Binding XpForNextLevel}"
+                                     Value="{Binding XpInCurrentLevel}"
+                                     Height="6"
+                                     Foreground="{StaticResource ColorAccent}"
+                                     Background="{StaticResource ColorSurfaceAlt}" />
+                        <TextBlock FontSize="10" Classes="subtle" HorizontalAlignment="Right">
+                            <Run Text="{Binding XpInCurrentLevel}" />
+                            <Run Text=" / " />
+                            <Run Text="{Binding XpForNextLevel}" />
+                            <Run Text=" XP" />
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Classes="card"
+                CornerRadius="{StaticResource RadiusLg}"
+                Padding="16,14"
+                Margin="0,16,0,20">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Classes="nav"
+                            Content="📋 Habits"
+                            Background="{Binding ActiveTab, Converter={StaticResource TabActiveBackgroundConverter}, ConverterParameter=Habits}"
+                            Foreground="{Binding ActiveTab, Converter={StaticResource TabActiveForegroundConverter}, ConverterParameter=Habits}"
+                            Command="{Binding ShowTabCommand}"
+                            CommandParameter="{x:Static desktopModels:ActiveTab.Habits}" />
+                    <Button Classes="nav"
+                            Content="🏆 Achievements"
+                            Background="{Binding ActiveTab, Converter={StaticResource TabActiveBackgroundConverter}, ConverterParameter=Achievements}"
+                            Foreground="{Binding ActiveTab, Converter={StaticResource TabActiveForegroundConverter}, ConverterParameter=Achievements}"
+                            Command="{Binding ShowTabCommand}"
+                            CommandParameter="{x:Static desktopModels:ActiveTab.Achievements}" />
+                    <Button Classes="nav"
+                            Content="👤 Profile"
+                            Background="{Binding ActiveTab, Converter={StaticResource TabActiveBackgroundConverter}, ConverterParameter=Profile}"
+                            Foreground="{Binding ActiveTab, Converter={StaticResource TabActiveForegroundConverter}, ConverterParameter=Profile}"
+                            Command="{Binding ShowTabCommand}"
+                            CommandParameter="{x:Static desktopModels:ActiveTab.Profile}" />
+                    <Button Classes="nav"
+                            Content="📊 Statistics"
+                            Background="{Binding ActiveTab, Converter={StaticResource TabActiveBackgroundConverter}, ConverterParameter=Statistics}"
+                            Foreground="{Binding ActiveTab, Converter={StaticResource TabActiveForegroundConverter}, ConverterParameter=Statistics}"
+                            Command="{Binding ShowTabCommand}"
+                            CommandParameter="{x:Static desktopModels:ActiveTab.Statistics}" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12"
+                            VerticalAlignment="Center">
+                    <ComboBox ItemsSource="{Binding Categories}"
+                              SelectedItem="{Binding SelectedCategory}"
+                              Width="140"
+                              Background="{StaticResource ColorSurfaceAlt}"
+                              Foreground="{StaticResource ColorTextPrimary}"
+                              BorderBrush="{StaticResource ColorBorder}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock
+                                    Text="{Binding Converter={StaticResource CategoryDisplayConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Button Classes="primary"
+                            Content="+ New Habit"
+                            Command="{Binding OpenCreateHabitCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid>
+            <!-- Aba Habits -->
+            <Grid
+                IsVisible="{Binding ActiveTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=Habits}"
+                RowDefinitions="Auto, *">
+
+                <!-- <Grid Grid.Row="0" ColumnDefinitions="Auto, *" Margin="0,0,0,20"> -->
+                <!--     <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"> -->
+                <!--         <TextBlock Text="📁 Category:" -->
+                <!--                    VerticalAlignment="Center" -->
+                <!--                    Foreground="{StaticResource ColorTextSecondary}" /> -->
+                <!--         <ComboBox ItemsSource="{Binding Categories}" -->
+                <!--                   SelectedItem="{Binding SelectedCategory}" -->
+                <!--                   Width="150"> -->
+                <!--             <ComboBox.ItemTemplate> -->
+                <!--                 <DataTemplate> -->
+                <!--                     <TextBlock -->
+                <!--                         Text="{Binding Converter={StaticResource CategoryDisplayConverter}}" /> -->
+                <!--                 </DataTemplate> -->
+                <!--             </ComboBox.ItemTemplate> -->
+                <!--         </ComboBox> -->
+                <!--     </StackPanel> -->
+                <!-- -->
+                <!--     <Button Command="{Binding OpenCreateHabitCommand}" -->
+                <!--             Content="+ New Habit" -->
+                <!--             Classes="accent" -->
+                <!--             Padding="12,8" -->
+                <!--             FontWeight="Bold" /> -->
+                <!-- </Grid> -->
+
+                <ItemsControl Grid.Row="1" ItemsSource="{Binding KanbanColumns}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="1" Columns="3" Margin="0"
+                                         HorizontalAlignment="Stretch" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:KanbanColumnViewModel">
+                            <Border Background="#121214" CornerRadius="8" Margin="6" Padding="12">
+                                <DockPanel LastChildFill="True">
+
+                                    <Border DockPanel.Dock="Top" Background="#1a1a1e"
+                                            CornerRadius="6">
+                                        <DockPanel>
+                                            <TextBlock Text="{Binding Title}"
+                                                       FontWeight="Bold"
+                                                       FontSize="16"
+                                                       Foreground="{StaticResource ColorTextPrimary}" />
+                                            <Border Background="#2a2a30"
+                                                    CornerRadius="10"
+                                                    Padding="6,2"
+                                                    HorizontalAlignment="Right">
+                                                <TextBlock Text="{Binding Habits.Count}"
+                                                           FontSize="12"
+                                                           FontWeight="Bold"
+                                                           Foreground="{StaticResource ColorTextSecondary}" />
+                                            </Border>
+                                        </DockPanel>
+                                    </Border>
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl ItemsSource="{Binding Habits}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Classes="card" Margin="0,0,0,10" Padding="14"
+                                                            Background="#1e1a1e">
+                                                        <StackPanel Spacing="8">
+
+                                                            <DockPanel>
+                                                                <TextBlock Text="{Binding Name}" FontSize="15"
+                                                                           FontWeight="Bold"
+                                                                           Foreground="{StaticResource ColorTextPrimary}"
+                                                                           TextWrapping="Wrap" MaxWidth="180" />
+                                                                <Border
+                                                                    Background="{Binding Difficulty, Converter={StaticResource DifficultyBgConverter}}"
+                                                                    CornerRadius="4" Padding="6,2"
+                                                                    HorizontalAlignment="Right" VerticalAlignment="Top">
+                                                                    <TextBlock Text="{Binding Difficulty}"
+                                                                               FontSize="10" FontWeight="Bold"
+                                                                               Foreground="{Binding Difficulty, Converter={StaticResource DifficultyColorConverter}}">
+                                                                    </TextBlock>
+                                                                </Border>
+                                                            </DockPanel>
+                                                            <TextBlock Text="{Binding Description}" FontSize="12"
+                                                                       Foreground="{StaticResource ColorTextSecondary}"
+                                                                       TextWrapping="Wrap" Margin="0,2,0,4"
+                                                                       IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+                                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                <TextBlock Text="🔥" FontSize="12" />
+                                                                <TextBlock Text="{Binding CurrentStreak}" FontSize="12"
+                                                                           FontWeight="Bold"
+                                                                           Foreground="{StaticResource ColorTextPrimary}" />
+                                                            </StackPanel>
+
+                                                            <Border BorderBrush="#2a2a30" BorderThickness="0,1,0,0"
+                                                                    Margin="0,4" Padding="0,4,0,0">
+                                                                <Grid ColumnDefinitions="*, Auto, Auto"
+                                                                      x:CompileBindings="False">
+                                                                    <Button Grid.Column="0"
+                                                                            Command="{Binding $parent[Window].DataContext.CompleteHabitCommand}"
+                                                                            CommandParameter="{Binding}"
+                                                                            Content="{Binding Converter={StaticResource HabitDoneLabelConverter}}"
+                                                                            Background="{Binding Converter={StaticResource HabitStatusAccentConverter}}"
+                                                                            Foreground="White" FontSize="12" Padding="8,4" HorizontalAlignment="Left" CornerRadius="4"/>
+                                                                    <Button Grid.Column="1"
+                                                                            Command="{Binding $parent[Window].DataContext.OpenHabitHistoryCommand}"
+                                                                            CommandParameter="{Binding}"
+                                                                            Content="📅" ToolTip.Tip="History"
+                                                                            Background="Transparent" BorderThickness="0" Margin="4,0" Padding="6,4"/>
+                                                                    <Button Grid.Column="2"
+                                                                            Command="{Binding $parent[Window].DataContext.DeleteHabitCommand}"
+                                                                            CommandParameter="{Binding}"
+                                                                            Content="🗑️" ToolTip.Tip="Delete"
+                                                                            Background="Transparent"
+                                                                            BorderThickness="0" Padding="6,4" />
+                                                                </Grid>
+                                                            </Border>
+
+
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+
+                                </DockPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Grid>
+
+            <!-- Aba Achievements -->
+            <ScrollViewer
+                IsVisible="{Binding ActiveTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=Achievements}">
+                <ItemsControl ItemsSource="{Binding Achievements}" Margin="20">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="models:Achievement">
+                            <Border Classes="card"
+                                    Padding="{StaticResource PadCard}"
+                                    Margin="0,0,0,12"
+                                    Opacity="{Binding IsUnlocked, Converter={StaticResource BoolToOpacityConverter}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Icon}"
+                                               FontSize="28"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,16,0" />
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Name}"
+                                                   FontSize="16"
+                                                   FontWeight="Bold"
+                                                   Foreground="{StaticResource ColorTextPrimary}" />
+                                        <TextBlock Text="{Binding Description}"
+                                                   FontSize="12"
+                                                   Foreground="{StaticResource ColorTextSecondary}"
+                                                   Margin="0,4,0,0" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- Aba Profile -->
+            <ScrollViewer
+                IsVisible="{Binding ActiveTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=Profile}">
+                <StackPanel Margin="20" Spacing="16">
+
+                    <Border Classes="card" Padding="24">
+                        <StackPanel Spacing="12">
+
+                            <StackPanel Orientation="Horizontal" Spacing="16">
+                                <Border Width="72" Height="72"
+                                        CornerRadius="36"
+                                        Background="{StaticResource ColorSurfaceAlt}">
+                                    <TextBlock Text="👤"
+                                               FontSize="32"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding ProfileUserName}"
+                                               FontSize="22"
+                                               FontWeight="Bold"
+                                               Foreground="{StaticResource ColorTextPrimary}" />
+                                    <TextBlock FontSize="13"
+                                               Foreground="{StaticResource ColorTextSecondary}">
+                                        <Run Text="Level " />
+                                        <Run Text="{Binding Level}" FontWeight="Bold" />
+                                        <Run Text=" · " />
+                                        <Run Text="{Binding LevelName}" />
+                                    </TextBlock>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <TextBlock Text="{Binding ProfileDescription}"
+                                       FontSize="13"
+                                       Foreground="{StaticResource ColorTextSecondary}"
+                                       TextWrapping="Wrap" />
+
+                            <WrapPanel Orientation="Horizontal">
+                                <Border Background="{StaticResource ColorSurfaceAlt}"
+                                        CornerRadius="{StaticResource RadiusSm}"
+                                        Padding="10,6"
+                                        Margin="0,0,8,8">
+                                    <TextBlock FontSize="12"
+                                               Foreground="{StaticResource ColorTextPrimary}">
+                                        <Run Text="⚧ " />
+                                        <Run Text="{Binding ProfileGender}" />
+                                    </TextBlock>
+                                </Border>
+                                <Border Background="{StaticResource ColorSurfaceAlt}"
+                                        CornerRadius="{StaticResource RadiusSm}"
+                                        Padding="10,6"
+                                        Margin="0,0,8,8">
+                                    <TextBlock FontSize="12"
+                                               Foreground="{StaticResource ColorTextPrimary}">
+                                        <Run Text="🎂 " />
+                                        <Run Text="{Binding ProfileDateOfBirth}" />
+                                    </TextBlock>
+                                </Border>
+                                <Border Background="{StaticResource ColorSurfaceAlt}"
+                                        CornerRadius="{StaticResource RadiusSm}"
+                                        Padding="10,6"
+                                        Margin="0,0,8,8">
+                                    <TextBlock FontSize="12"
+                                               Foreground="{StaticResource ColorTextPrimary}">
+                                        <Run Text="📅 Member since " />
+                                        <Run Text="{Binding ProfileMemberSince}" />
+                                    </TextBlock>
+                                </Border>
+                            </WrapPanel>
+
+                        </StackPanel>
+                    </Border>
+
+                    <Border Classes="card" Padding="24">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Stats"
+                                       FontSize="16"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource ColorTextPrimary}" />
+                            <TextBlock FontSize="13"
+                                       Foreground="{StaticResource ColorTextSecondary}">
+                                <Run Text="⭐ Total XP: " />
+                                <Run Text="{Binding CurrentXp}" FontWeight="Bold"
+                                     Foreground="{StaticResource ColorTextPrimary}" />
+                            </TextBlock>
+                            <TextBlock FontSize="13"
+                                       Foreground="{StaticResource ColorTextSecondary}">
+                                <Run Text="🔥 Global Longest Streak: " />
+                                <Run Text="{Binding GlobalLongestStreak}" FontWeight="Bold"
+                                     Foreground="{StaticResource ColorTextPrimary}" />
+                                <Run Text=" days" />
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Button Classes="primary"
+                                Content="✏️ Edit Profile"
+                                Command="{Binding OpenEditProfileCommand}"
+                                Padding="16,10" />
+                        <Button Classes="secondary"
+                                Content="👁 Preview"
+                                Padding="16,10" />
+                    </StackPanel>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Aba Statistics -->
+            <ScrollViewer
+                IsVisible="{Binding ActiveTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=Statistics}">
+                <StackPanel Margin="20" Spacing="16">
+
+                    <Border Classes="card" Padding="24">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="📊 Overview"
+                                       FontSize="18"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource ColorTextPrimary}" />
+
+                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto"
+                                  RowSpacing="10" ColumnSpacing="10">
+                                <Border Grid.Row="0" Grid.Column="0"
+                                        Background="{StaticResource ColorSurfaceAlt}"
+                                        CornerRadius="{StaticResource RadiusSm}"
+                                        Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="Total Habits"
+                                                   Foreground="{StaticResource ColorTextSecondary}"
+                                                   FontSize="12" />
+                                        <TextBlock Text="{Binding StatTotalHabits}"
+                                                   Foreground="{StaticResource ColorTextPrimary}"
+                                                   FontSize="20"
+                                                   FontWeight="Bold" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Grid.Row="0" Grid.Column="1"
+                                        Background="{StaticResource ColorSurfaceAlt}"
+                                        CornerRadius="{StaticResource RadiusSm}"
+                                        Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="Completed Today"
+                                                   Foreground="{StaticResource ColorTextSecondary}"
+                                                   FontSize="12" />
+                                        <TextBlock Text="{Binding StatCompletedToday}"
+                                                   Foreground="{StaticResource ColorTextPrimary}"
+                                                   FontSize="20"
+                                                   FontWeight="Bold" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Grid.Row="1" Grid.Column="0"
+                                        Background="{StaticResource ColorSurfaceAlt}"
+                                        CornerRadius="{StaticResource RadiusSm}"
+                                        Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="Total Completions"
+                                                   Foreground="{StaticResource ColorTextSecondary}"
+                                                   FontSize="12" />
+                                        <TextBlock Text="{Binding StatTotalCompletions}"
+                                                   Foreground="{StaticResource ColorTextPrimary}"
+                                                   FontSize="20"
+                                                   FontWeight="Bold" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Grid.Row="1" Grid.Column="1"
+                                        Background="{StaticResource ColorSurfaceAlt}"
+                                        CornerRadius="{StaticResource RadiusSm}"
+                                        Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="Total XP"
+                                                   Foreground="{StaticResource ColorTextSecondary}"
+                                                   FontSize="12" />
+                                        <TextBlock Text="{Binding StatTotalXp}"
+                                                   Foreground="{StaticResource ColorTextPrimary}"
+                                                   FontSize="20"
+                                                   FontWeight="Bold" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Classes="card" Padding="24">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="📈 Level Progress"
+                                       FontSize="18"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource ColorTextPrimary}" />
+                            <TextBlock FontSize="14"
+                                       Foreground="{StaticResource ColorTextSecondary}">
+                                <Run Text="Level " />
+                                <Run Text="{Binding StatCurrentLevel}" FontWeight="Bold"
+                                     Foreground="{StaticResource ColorTextPrimary}" />
+                                <Run Text=" · " />
+                                <Run Text="{Binding StatLevelName}"
+                                     Foreground="{StaticResource ColorTextPrimary}" />
+                            </TextBlock>
+                            <ProgressBar Minimum="0"
+                                         Maximum="{Binding StatXpForNext}"
+                                         Value="{Binding StatXpProgress}"
+                                         Height="10"
+                                         Foreground="{StaticResource ColorAccent}"
+                                         Background="{StaticResource ColorSurfaceAlt}" />
+                            <TextBlock FontSize="12"
+                                       Foreground="{StaticResource ColorTextSecondary}">
+                                <Run Text="{Binding StatXpProgress}" />
+                                <Run Text=" / " />
+                                <Run Text="{Binding StatXpForNext}" />
+                                <Run Text=" XP" />
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Classes="card" Padding="24">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="🔥 Best Streak"
+                                       FontSize="18"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource ColorTextPrimary}" />
+                            <TextBlock FontSize="14"
+                                       Foreground="{StaticResource ColorTextSecondary}">
+                                <Run Text="{Binding StatBestStreakName}"
+                                     Foreground="{StaticResource ColorTextPrimary}"
+                                     FontWeight="Bold" />
+                                <Run Text=" — " />
+                                <Run Text="{Binding StatBestStreakDays}"
+                                     Foreground="{StaticResource ColorTextPrimary}"
+                                     FontWeight="Bold" />
+                                <Run Text=" days" />
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+    </DockPanel>
+</Window>
+
+=== ARQUIVO: ./HabitTracker.Desktop/Views/MainWindow.axaml.cs ===
+using Avalonia.Controls;
+
+namespace HabitTracker.Desktop.Views;
+
+public partial class MainWindow : Window
+{
+    public MainWindow()
+    {
+        InitializeComponent();
+    }
+}
