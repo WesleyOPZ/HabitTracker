@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -16,8 +17,7 @@ using HabitTracker.Desktop.Models;
 
 namespace HabitTracker.Desktop.ViewModels;
 
-public partial class MainWindowViewModel : ViewModelBase
-{
+public partial class MainWindowViewModel : ViewModelBase {
     private readonly HabitService _habitService;
 
     public ObservableCollection<KanbanColumnViewModel> KanbanColumns { get; } = new();
@@ -50,27 +50,31 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private List<Habit> _allHabits = new();
 
-    public MainWindowViewModel()
-    {
-        if (Design.IsDesignMode)
-        {
+    public record MoveHabitArgs(Habit Habit, int TargetFolderId);
+
+    public MainWindowViewModel() {
+        if (Design.IsDesignMode) {
             _habitService = null!;
             return;
         }
-    
+
         _habitService = new HabitService();
+
+        // Tenta rodar o reset. Se rodar (virou o dia), recarrega tudo.
+        if (_habitService.ProcessDailyReset()) {
+            // Notifica o usuário com um popup se desejar
+        }
+
         LoadHabits();
     }
 
-    private void LoadHabits()
-    {
+    private void LoadHabits() {
         _allHabits = _habitService.GetHabits();
 
-        if (KanbanColumns.Count == 0)
-        {
-            KanbanColumns.Add(new KanbanColumnViewModel(1, "To-Do"));
-            KanbanColumns.Add(new KanbanColumnViewModel(2, "In-Progress"));
-            KanbanColumns.Add(new KanbanColumnViewModel(3, "Done"));
+        if (KanbanColumns.Count == 0) {
+            KanbanColumns.Add(new KanbanColumnViewModel((int)FolderType.ToDo, "To-Do"));
+            KanbanColumns.Add(new KanbanColumnViewModel((int)FolderType.InProgress, "In-Progress"));
+            KanbanColumns.Add(new KanbanColumnViewModel((int)FolderType.Done, "Done"));
         }
 
         ApplyFilter();
@@ -90,13 +94,11 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task CompleteHabit(Habit habit)
-    {
+    private async Task CompleteHabit(Habit habit) {
         var result = _habitService.CompleteHabit(habit.Id);
         LoadHabits();
 
-        if (result.AlreadyCompleted)
-        {
+        if (result.AlreadyCompleted) {
             var box = MessageBoxManager.GetMessageBoxStandard(
                 "Already Done!",
                 $"'{habit.Name}' already completed today!",
@@ -105,8 +107,7 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        if (result.LeveledUp)
-        {
+        if (result.LeveledUp) {
             var box = MessageBoxManager.GetMessageBoxStandard(
                 "🎉 Level Up!",
                 $"You reached Level {result.NewLevel} - {LevelSystem.GetLevelName(result.NewLevel)}!",
@@ -118,8 +119,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task OpenCreateHabit()
-    {
+    private async Task OpenCreateHabit() {
         var mainWindow = (Application.Current?.ApplicationLifetime
             as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
 
@@ -130,8 +130,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         await dialog.ShowDialog(mainWindow);
 
-        if (viewModel.Confirmed)
-        {
+        if (viewModel.Confirmed) {
             var result = _habitService.CreateHabit(viewModel.Name, viewModel.Description, viewModel.Difficulty,
                 viewModel.Category);
 
@@ -142,8 +141,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task DeleteHabit(Habit habit)
-    {
+    private async Task DeleteHabit(Habit habit) {
         var box = MessageBoxManager.GetMessageBoxStandard(
             "Delete Habit",
             $"Are you sure you want to delete '{habit.Name}'?",
@@ -151,16 +149,14 @@ public partial class MainWindowViewModel : ViewModelBase
 
         var result = await box.ShowAsync();
 
-        if (result == ButtonResult.Yes)
-        {
+        if (result == ButtonResult.Yes) {
             _habitService.DeleteHabit(habit.Id);
             LoadHabits();
         }
     }
 
     [RelayCommand]
-    private async Task OpenHabitHistory(Habit habit)
-    {
+    private async Task OpenHabitHistory(Habit habit) {
         var mainWindow = (Application.Current?.ApplicationLifetime
             as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
 
@@ -173,10 +169,8 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void ShowTab(ActiveTab tab) => ActiveTab = tab;
 
-    private async Task ShowAchievementPopups(List<Achievement> achievements)
-    {
-        foreach (var achievement in achievements)
-        {
+    private async Task ShowAchievementPopups(List<Achievement> achievements) {
+        foreach (var achievement in achievements) {
             var box = MessageBoxManager.GetMessageBoxStandard("🏆 Achievement Unlocked!",
                 $"{achievement.Icon} {achievement.Name}\n{achievement.Description}",
                 ButtonEnum.Ok);
@@ -185,8 +179,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task OpenEditProfile()
-    {
+    private async Task OpenEditProfile() {
         var mainWindow = (Application.Current?.ApplicationLifetime
             as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
 
@@ -198,8 +191,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         await dialog.ShowDialog(mainWindow);
 
-        if (viewModel.Confirmed)
-        {
+        if (viewModel.Confirmed) {
             profile.UserName = viewModel.UserName;
             profile.Description = viewModel.Description;
             profile.Gender = viewModel.Gender;
@@ -211,8 +203,47 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    public List<Category?> Categories { get; } = new()
-    {
+    [RelayCommand]
+    public void ChangeHabitStatus(MoveHabitArgs args) {
+        if (args == null) return;
+        var habit = args.Habit;
+        var targetFolderId = args.TargetFolderId;
+
+        if (habit.FolderId == targetFolderId) return;
+        
+
+        // 1. Atualiza o Service (Persistência e Regra de Negócio)
+        _habitService.MoveHabitToFolder(habit.Id, targetFolderId);
+
+        // 2. Atualiza a UI (Remover da coluna antiga, adicionar na nova)
+        var oldColumn = KanbanColumns.FirstOrDefault(c => c.Id != targetFolderId && c.Habits.Contains(habit));
+        var newColumn = KanbanColumns.FirstOrDefault(c => c.Id == targetFolderId);
+
+        if (oldColumn == null || newColumn == null) return;
+
+        oldColumn.Habits.Remove(habit);
+        newColumn.Habits.Add(habit);
+
+        // 3. Atualiza os status globais de XP e Nível
+        RefreshXpStats();
+    }
+
+    [RelayCommand]
+    public void MoveHabitForward(Habit habit) {
+        int next = habit.FolderId + 1;
+        if (next > (int)FolderType.Done) return;
+        ChangeHabitStatus(new MoveHabitArgs(habit, next));
+    }
+
+    [RelayCommand]
+    public void MoveHabitBack(Habit habit) {
+        int prev = habit.FolderId - 1;
+        if (prev < (int)FolderType.ToDo) return;
+        ChangeHabitStatus(new MoveHabitArgs(habit, prev));
+    }
+
+
+    public List<Category?> Categories { get; } = new() {
         null,
         Category.Health,
         Category.Study,
@@ -220,10 +251,8 @@ public partial class MainWindowViewModel : ViewModelBase
         Category.Personal
     };
 
-    private void ApplyFilter()
-    {
-        foreach (var column in KanbanColumns)
-        {
+    private void ApplyFilter() {
+        foreach (var column in KanbanColumns) {
             column.Habits.Clear();
         }
 
@@ -231,25 +260,21 @@ public partial class MainWindowViewModel : ViewModelBase
             ? _allHabits
             : _allHabits.Where(h => h.Category == SelectedCategory);
 
-        foreach (var habit in filteredHabits)
-        {
-            int targetFolder = habit.FolderId > 0 ? habit.FolderId : 1;
+        foreach (var habit in filteredHabits) {
+            int targetFolder = habit.FolderId > 0 ? habit.FolderId : (int)FolderType.ToDo;
 
             var targetColumn = KanbanColumns.FirstOrDefault(c => c.Id == targetFolder);
-            if (targetColumn != null)
-            {
+            if (targetColumn != null) {
                 targetColumn.Habits.Add(habit);
             }
         }
     }
 
-    partial void OnSelectedCategoryChanged(Category? value)
-    {
+    partial void OnSelectedCategoryChanged(Category? value) {
         ApplyFilter();
     }
 
-    private void LoadProfile()
-    {
+    private void LoadProfile() {
         var profile = _habitService.GetProfile();
         ProfileUserName = string.IsNullOrEmpty(profile.UserName) ? "No name set" : profile.UserName;
         ProfileDescription = string.IsNullOrEmpty(profile.Description) ? "No description set" : profile.Description;
@@ -261,8 +286,7 @@ public partial class MainWindowViewModel : ViewModelBase
         GlobalLongestStreak = profile.GlobalLongestStreak;
     }
 
-    private void LoadStatistics()
-    {
+    private void LoadStatistics() {
         var stats = _habitService.Statistics.GetStatistics();
 
         StatTotalHabits = stats.TotalHabits;
@@ -275,6 +299,15 @@ public partial class MainWindowViewModel : ViewModelBase
         StatTotalCompletions = stats.TotalCompletions;
 
         StatBestStreakName = stats.BestStreak?.Name ?? "No habits yet";
-        StatBestStreakDays = stats.BestStreak?.CurrentStreak ?? 0;
+        StatBestStreakDays = stats.BestStreak?.LongestStreak ?? 0;
+    }
+
+    private void RefreshXpStats() {
+        int totalXp = _habitService.GetProfile().TotalXp;
+        Level = LevelSystem.CalculateLevel(totalXp);
+        LevelName = LevelSystem.GetLevelName(Level);
+        CurrentXp = totalXp;
+        XpInCurrentLevel = LevelSystem.GetXpProgressInCurrentLevel(totalXp, Level);
+        XpForNextLevel = LevelSystem.GetXpForNextLevel(Level);
     }
 }

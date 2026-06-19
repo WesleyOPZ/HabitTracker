@@ -11,3 +11,25 @@ insert_final_newline = true
 [*.cs]
 indent_style = space
 indent_size = 4
+
+# ==========================================
+# REGRAS DE FORMATAÇÃO ESTILO RIDER (JETBRAINS)
+# ==========================================
+
+# Manter chaves na mesma linha (padrão JetBrains/Rider)
+csharp_new_line_before_open_brace = none
+csharp_new_line_before_else = false
+csharp_new_line_before_catch = false
+csharp_new_line_before_finally = false
+
+# Se quiser abrir chaves na mesma linha para tudo (métodos, tipos, propriedades):
+# (Se preferir chaves na linha de baixo para métodos, mude para: types,variables,properties)
+csharp_new_line_before_open_brace = none
+
+# Organização de Usings
+dotnet_sort_system_directives_first = true
+csharp_separate_import_directive_groups = false
+
+# Espaçamentos extras estilo IntelliJ
+csharp_space_after_cast = false
+csharp_space_after_keywords_in_control_flow_statements = true

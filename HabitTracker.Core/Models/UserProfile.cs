@@ -1,9 +1,6 @@
-using HabitTracker.Desktop.Models;
-
 namespace HabitTracker.Core.Models;
 
-public class UserProfile
-{
+public class UserProfile {
     public string UserName { get; set; } = string.Empty;
     public string PhotoPath { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
@@ -13,5 +10,5 @@ public class UserProfile
     public DateTime? DateOfBirth { get; set; }
     public DateTime DateCreated { get; set; }
     public List<AchievementType> FeaturedAchievements { get; set; } = new();
+    public DateTime LastResetDate { get; set; } = DateTime.Today;
 }
-

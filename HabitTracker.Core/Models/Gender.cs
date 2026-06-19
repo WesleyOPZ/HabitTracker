@@ -1,7 +1,6 @@
-namespace HabitTracker.Desktop.Models;
+namespace HabitTracker.Core.Models;
 
-public enum Gender
-{
+public enum Gender {
     Unknown,
     Male,
     Female,

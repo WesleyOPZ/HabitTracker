@@ -3,8 +3,7 @@ using HabitTracker.Core.Data;
 
 namespace HabitTracker.Core.Services;
 
-public class HabitService
-{
+public class HabitService {
     private List<Habit> _habits;
     private List<HabitFolder> _folders;
     private readonly JsonStorage _storage;
@@ -16,25 +15,20 @@ public class HabitService
     public AchievementService Achievements { get; private set; }
     public UserProfile GetProfile() => _profile;
 
-    public HabitService()
-    {
+    public HabitService() {
         _storage = new JsonStorage();
         var storageData = _storage.LoadHabits();
         _habits = storageData.Habits;
         _folders = storageData.Folders;
 
-        if (!_folders.Any())
-        {
-            _folders.Add(new HabitFolder { Id = 1, Name = "To Do", DisplayOrder = 0, CreatedAt = DateTime.UtcNow });
-            _folders.Add(
-                new HabitFolder { Id = 2, Name = "In Progress", DisplayOrder = 1, CreatedAt = DateTime.UtcNow });
-            _folders.Add(new HabitFolder { Id = 3, Name = "Done", DisplayOrder = 2, CreatedAt = DateTime.UtcNow });
+        if (!_folders.Any()) {
+            _folders.Add(new HabitFolder { Id = (int)FolderType.ToDo, Name = "To Do", DisplayOrder = 0, CreatedAt = DateTime.UtcNow });
+            _folders.Add(new HabitFolder { Id = (int)FolderType.InProgress, Name = "In Progress", DisplayOrder = 1, CreatedAt = DateTime.UtcNow });
+            _folders.Add(new HabitFolder { Id = (int)FolderType.Done, Name = "Done", DisplayOrder = 2, CreatedAt = DateTime.UtcNow });
 
 
-            foreach (var habit in _habits)
-            {
-                if (habit.FolderId == 0)
-                {
+            foreach (var habit in _habits) {
+                if (habit.FolderId == 0) {
                     habit.FolderId = 1;
                 }
             }
@@ -51,26 +45,21 @@ public class HabitService
         Achievements = new AchievementService(_habits, _profile);
     }
 
-    private void SaveAllData()
-    {
-        _storage.SaveHabits(new HabitStorageData
-        {
+    private void SaveAllData() {
+        _storage.SaveHabits(new HabitStorageData {
             Folders = _folders,
             Habits = _habits
         });
     }
 
-    public List<HabitFolder> GetFolders()
-    {
-        return _folders.OrderBy(f => f.Name).ToList();
+    public List<HabitFolder> GetFolders() {
+        return _folders.OrderBy(f => f.DisplayOrder).ToList();
     }
 
-    public void CreateFolder(string name)
-    {
+    public void CreateFolder(string name) {
         if (string.IsNullOrWhiteSpace(name)) return;
 
-        var folder = new HabitFolder
-        {
+        var folder = new HabitFolder {
             Id = _nextFolderId++,
             Name = name,
             DisplayOrder = _folders.Any() ? _folders.Max(f => f.DisplayOrder) + 1 : 0,
@@ -84,17 +73,14 @@ public class HabitService
     public CreateHabitResult CreateHabit(string name, string description = "",
         Difficulty difficulty = Difficulty.Normal,
         Category category = Category.Personal,
-        int? folderId = null)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-        {
+        int? folderId = null) {
+        if (string.IsNullOrWhiteSpace(name)) {
             return new CreateHabitResult { Success = false, Message = "Habit name cannot be empty!" };
         }
-        
-        int targetFolderId = folderId ?? (_folders.FirstOrDefault()?.Id ?? 1);
 
-        var habit = new Habit
-        {
+        int targetFolderId = folderId ?? (_folders.FirstOrDefault()?.Id ?? (int)FolderType.ToDo);
+
+        var habit = new Habit {
             Id = _nextId++,
             Name = name,
             Description = description,
@@ -110,38 +96,57 @@ public class HabitService
 
         _habits.Add(habit);
         SaveAllData();
-        
+
         var newAchievements = Achievements.CheckAchievements();
 
-        return new CreateHabitResult
-        {
+        return new CreateHabitResult {
             Success = true,
             Message = $"Habit '{name}' created successfully! (ID: {habit.Id}).",
             NewAchievements = newAchievements
         };
     }
 
-    public void MoveHabitToFolder(int habitId, int folderId)
-    {
+    public void MoveHabitToFolder(int habitId, int targetFolderId) {
         var habit = _habits.FirstOrDefault(h => h.Id == habitId);
-        if (habit != null && _folders.Any(f => f.Id == folderId))
-        {
-            habit.FolderId = folderId;
-            SaveAllData();
+        if (habit == null || habit.FolderId == targetFolderId) return;
+
+        int oldFolderId = habit.FolderId;
+
+        // --- ENTRANDO NO DONE ---
+        if (targetFolderId == (int)FolderType.Done && oldFolderId != (int)FolderType.Done) {
+            if (!habit.CompletedDates.Any(d => d.Date == DateTime.Today)) {
+                habit.CompletedDates.Add(DateTime.Now);
+                int xpToEarn = (int)habit.Difficulty + habit.CurrentStreak;
+                habit.XpGainedToday = xpToEarn;
+                habit.TotalXp += xpToEarn;
+                _profile.TotalXp += xpToEarn;
+            }
         }
+        // --- SAINDO DO DONE ---
+        else if (oldFolderId == (int)FolderType.Done && targetFolderId != (int)FolderType.Done) {
+            var today = habit.CompletedDates.FirstOrDefault(d => d.Date == DateTime.Today);
+            if (today != default) {
+                habit.CompletedDates.Remove(today);
+                _profile.TotalXp -= habit.XpGainedToday;
+                habit.TotalXp -= habit.XpGainedToday;
+                habit.XpGainedToday = 0;
+            }
+        }
+
+        habit.FolderId = targetFolderId;
+        SaveAllData();
+        _storage.SaveProfile(_profile);
     }
 
 
-    public CompleteHabitResult CompleteHabit(int id)
-    {
+    public CompleteHabitResult CompleteHabit(int id) {
         var habit = _habits.FirstOrDefault(h => h.Id == id);
 
         if (habit == null)
             return new CompleteHabitResult { Success = false, Message = "Habit not Found." };
 
         if (habit.IsCompletedToday())
-            return new CompleteHabitResult
-                { AlreadyCompleted = true, Message = $"You already completed '{habit.Name}' today!" };
+            return new CompleteHabitResult { AlreadyCompleted = true, Message = $"You already completed '{habit.Name}' today!" };
 
         habit.CompletedDates.Add(DateTime.Now);
 
@@ -170,8 +175,7 @@ public class HabitService
 
         var newAchievements = Achievements.CheckAchievements();
 
-        return new CompleteHabitResult
-        {
+        return new CompleteHabitResult {
             Success = true,
             XpEarned = xpEarned,
             LeveledUp = newLevel > oldLevel,
@@ -180,8 +184,28 @@ public class HabitService
         };
     }
 
-    public DeleteHabitResult DeleteHabit(int id)
-    {
+    public bool ProcessDailyReset() {
+        if (_profile.LastResetDate.Date >= DateTime.Today) return false;
+
+        foreach (var habit in _habits) {
+            if (habit.FolderId == (int)FolderType.Done) {
+                habit.CurrentStreak++;
+                if (habit.CurrentStreak > habit.LongestStreak)
+                    habit.LongestStreak = habit.CurrentStreak;
+            } else {
+                habit.CurrentStreak = 0;
+            }
+            habit.FolderId = (int)FolderType.ToDo;
+            habit.XpGainedToday = 0;
+        }
+
+        _profile.LastResetDate = DateTime.Today;
+        SaveAllData();
+        _storage.SaveProfile(_profile);
+        return true;
+    }
+
+    public DeleteHabitResult DeleteHabit(int id) {
         var habit = _habits.FirstOrDefault(h => h.Id == id);
 
         if (habit == null)
@@ -194,23 +218,19 @@ public class HabitService
     }
 
 
-    public List<Habit> GetHabits()
-    {
+    public List<Habit> GetHabits() {
         return _habits.OrderByDescending(h => h.CurrentStreak).ToList();
     }
 
-    public List<Habit> GetHabitsByFolder(int folderId)
-    {
+    public List<Habit> GetHabitsByFolder(int folderId) {
         return _habits.Where(h => h.FolderId == folderId).OrderByDescending(h => h.CurrentStreak).ToList();
     }
 
-    public int GetTotalXp()
-    {
+    public int GetTotalXp() {
         return _profile.TotalXp;
     }
 
-    public void UpdateProfile(UserProfile profile)
-    {
+    public void UpdateProfile(UserProfile profile) {
         _profile = profile;
         _storage.SaveProfile(_profile);
     }

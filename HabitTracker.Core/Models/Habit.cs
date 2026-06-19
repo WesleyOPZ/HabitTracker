@@ -13,6 +13,7 @@ public class Habit
     public Category Category { get; set; } = Category.Personal;
     public List<DateTime> CompletedDates { get; set; } = new List<DateTime>();
     public int FolderId { get; set; }
+    public int XpGainedToday {  get; set; }
     
     public bool IsCompletedToday()
     {

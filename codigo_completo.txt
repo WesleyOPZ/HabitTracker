@@ -212,6 +212,7 @@ public class Habit
     public Category Category { get; set; } = Category.Personal;
     public List<DateTime> CompletedDates { get; set; } = new List<DateTime>();
     public int FolderId { get; set; }
+    public int XpGainedToday {  get; set; }
     
     public bool IsCompletedToday()
     {
@@ -264,6 +265,7 @@ public class UserProfile
     public DateTime? DateOfBirth { get; set; }
     public DateTime DateCreated { get; set; }
     public List<AchievementType> FeaturedAchievements { get; set; } = new();
+    public DateTime LastResetDate { get; set; } = DateTime.Today;
 }
 
 
@@ -498,8 +500,7 @@ using HabitTracker.Core.Data;
 
 namespace HabitTracker.Core.Services;
 
-public class HabitService
-{
+public class HabitService {
     private List<Habit> _habits;
     private List<HabitFolder> _folders;
     private readonly JsonStorage _storage;
@@ -511,25 +512,21 @@ public class HabitService
     public AchievementService Achievements { get; private set; }
     public UserProfile GetProfile() => _profile;
 
-    public HabitService()
-    {
+    public HabitService() {
         _storage = new JsonStorage();
         var storageData = _storage.LoadHabits();
         _habits = storageData.Habits;
         _folders = storageData.Folders;
 
-        if (!_folders.Any())
-        {
+        if (!_folders.Any()) {
             _folders.Add(new HabitFolder { Id = 1, Name = "To Do", DisplayOrder = 0, CreatedAt = DateTime.UtcNow });
             _folders.Add(
                 new HabitFolder { Id = 2, Name = "In Progress", DisplayOrder = 1, CreatedAt = DateTime.UtcNow });
             _folders.Add(new HabitFolder { Id = 3, Name = "Done", DisplayOrder = 2, CreatedAt = DateTime.UtcNow });
 
 
-            foreach (var habit in _habits)
-            {
-                if (habit.FolderId == 0)
-                {
+            foreach (var habit in _habits) {
+                if (habit.FolderId == 0) {
                     habit.FolderId = 1;
                 }
             }
@@ -546,26 +543,21 @@ public class HabitService
         Achievements = new AchievementService(_habits, _profile);
     }
 
-    private void SaveAllData()
-    {
-        _storage.SaveHabits(new HabitStorageData
-        {
+    private void SaveAllData() {
+        _storage.SaveHabits(new HabitStorageData {
             Folders = _folders,
             Habits = _habits
         });
     }
 
-    public List<HabitFolder> GetFolders()
-    {
+    public List<HabitFolder> GetFolders() {
         return _folders.OrderBy(f => f.Name).ToList();
     }
 
-    public void CreateFolder(string name)
-    {
+    public void CreateFolder(string name) {
         if (string.IsNullOrWhiteSpace(name)) return;
 
-        var folder = new HabitFolder
-        {
+        var folder = new HabitFolder {
             Id = _nextFolderId++,
             Name = name,
             DisplayOrder = _folders.Any() ? _folders.Max(f => f.DisplayOrder) + 1 : 0,
@@ -579,17 +571,14 @@ public class HabitService
     public CreateHabitResult CreateHabit(string name, string description = "",
         Difficulty difficulty = Difficulty.Normal,
         Category category = Category.Personal,
-        int? folderId = null)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-        {
+        int? folderId = null) {
+        if (string.IsNullOrWhiteSpace(name)) {
             return new CreateHabitResult { Success = false, Message = "Habit name cannot be empty!" };
         }
-        
+
         int targetFolderId = folderId ?? (_folders.FirstOrDefault()?.Id ?? 1);
 
-        var habit = new Habit
-        {
+        var habit = new Habit {
             Id = _nextId++,
             Name = name,
             Description = description,
@@ -605,38 +594,57 @@ public class HabitService
 
         _habits.Add(habit);
         SaveAllData();
-        
+
         var newAchievements = Achievements.CheckAchievements();
 
-        return new CreateHabitResult
-        {
+        return new CreateHabitResult {
             Success = true,
             Message = $"Habit '{name}' created successfully! (ID: {habit.Id}).",
             NewAchievements = newAchievements
         };
     }
 
-    public void MoveHabitToFolder(int habitId, int folderId)
-    {
+    public void MoveHabitToFolder(int habitId, int targetFolderId) {
         var habit = _habits.FirstOrDefault(h => h.Id == habitId);
-        if (habit != null && _folders.Any(f => f.Id == folderId))
-        {
-            habit.FolderId = folderId;
-            SaveAllData();
+        if (habit == null || habit.FolderId == targetFolderId) return;
+
+        int oldFolderId = habit.FolderId;
+
+        // --- ENTRANDO NO DONE ---
+        if (targetFolderId == 3 && oldFolderId != 3) {
+            if (!habit.CompletedDates.Any(d => d.Date == DateTime.Today)) {
+                habit.CompletedDates.Add(DateTime.Now);
+                int xpToEarn = (int)habit.Difficulty + habit.CurrentStreak;
+                habit.XpGainedToday = xpToEarn;
+                habit.TotalXp += xpToEarn;
+                _profile.TotalXp += xpToEarn;
+            }
         }
+        // --- SAINDO DO DONE ---
+        else if (oldFolderId == 3 && targetFolderId != 3) {
+            var today = habit.CompletedDates.FirstOrDefault(d => d.Date == DateTime.Today);
+            if (today != default) {
+                habit.CompletedDates.Remove(today);
+                _profile.TotalXp -= habit.XpGainedToday;
+                habit.TotalXp -= habit.XpGainedToday;
+                habit.XpGainedToday = 0;
+            }
+        }
+
+        habit.FolderId = targetFolderId;
+        SaveAllData();
+        _storage.SaveProfile(_profile);
     }
 
 
-    public CompleteHabitResult CompleteHabit(int id)
-    {
+    public CompleteHabitResult CompleteHabit(int id) {
         var habit = _habits.FirstOrDefault(h => h.Id == id);
 
         if (habit == null)
             return new CompleteHabitResult { Success = false, Message = "Habit not Found." };
 
         if (habit.IsCompletedToday())
-            return new CompleteHabitResult
-                { AlreadyCompleted = true, Message = $"You already completed '{habit.Name}' today!" };
+            return new CompleteHabitResult { AlreadyCompleted = true, Message = $"You already completed '{habit.Name}' today!" };
 
         habit.CompletedDates.Add(DateTime.Now);
 
@@ -665,8 +673,7 @@ public class HabitService
 
         var newAchievements = Achievements.CheckAchievements();
 
-        return new CompleteHabitResult
-        {
+        return new CompleteHabitResult {
             Success = true,
             XpEarned = xpEarned,
             LeveledUp = newLevel > oldLevel,
@@ -675,8 +682,31 @@ public class HabitService
         };
     }
 
-    public DeleteHabitResult DeleteHabit(int id)
-    {
+    public bool ProcessDailyReset() {
+        if (_profile.LastResetDate.Date >= DateTime.Today) return false;
+
+        foreach (var habit in _habits) {
+            if (habit.FolderId == 3) {
+                // Estava no Done
+                habit.CurrentStreak++;
+                if (habit.CurrentStreak > habit.LongestStreak)
+                    habit.LongestStreak = habit.CurrentStreak;
+            } else {
+                // Não concluiu o hábito
+                habit.CurrentStreak = 0;
+            }
+            // Reset para o novo dia
+            habit.FolderId = 1; // Volta para To-Do
+            habit.XpGainedToday = 0;
+        }
+
+        _profile.LastResetDate = DateTime.Today;
+        SaveAllData();
+        _storage.SaveProfile(_profile);
+        return true; // Indica que houve reset e a UI precisa atualizar
+    }
+
+    public DeleteHabitResult DeleteHabit(int id) {
         var habit = _habits.FirstOrDefault(h => h.Id == id);
 
         if (habit == null)
@@ -689,23 +719,19 @@ public class HabitService
     }
 
 
-    public List<Habit> GetHabits()
-    {
+    public List<Habit> GetHabits() {
         return _habits.OrderByDescending(h => h.CurrentStreak).ToList();
     }
 
-    public List<Habit> GetHabitsByFolder(int folderId)
-    {
+    public List<Habit> GetHabitsByFolder(int folderId) {
         return _habits.Where(h => h.FolderId == folderId).OrderByDescending(h => h.CurrentStreak).ToList();
     }
 
-    public int GetTotalXp()
-    {
+    public int GetTotalXp() {
         return _profile.TotalXp;
     }
 
-    public void UpdateProfile(UserProfile profile)
-    {
+    public void UpdateProfile(UserProfile profile) {
         _profile = profile;
         _storage.SaveProfile(_profile);
     }
@@ -1170,13 +1196,13 @@ public partial class SelectableAchievement : ObservableObject
     public SelectableAchievement(Achievement achievement, bool isSelected, Func<bool> canSelectMore)
     {
         Achievement = achievement;
-        _isSelected = isSelected;
+        IsSelected = isSelected;
         _canSelectMore = canSelectMore;
     }
     
     /// Pode ser clicado se JÁ está selecionado (para desmarcar)
     /// OU se o limite ainda não foi atingido (para marcar).
-    public bool CanToggle => _isSelected || _canSelectMore();
+    public bool CanToggle => IsSelected || _canSelectMore();
     
     /// Chamado pelo ViewModel após cada toggle para avisar a UI.
     public void NotifyCanToggleChanged()  => OnPropertyChanged(nameof(CanToggle));
@@ -1401,8 +1427,7 @@ using HabitTracker.Desktop.Models;
 
 namespace HabitTracker.Desktop.ViewModels;
 
-public partial class MainWindowViewModel : ViewModelBase
-{
+public partial class MainWindowViewModel : ViewModelBase {
     private readonly HabitService _habitService;
 
     public ObservableCollection<KanbanColumnViewModel> KanbanColumns { get; } = new();
@@ -1435,24 +1460,28 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private List<Habit> _allHabits = new();
 
-    public MainWindowViewModel()
-    {
-        if (Design.IsDesignMode)
-        {
+    public record MoveHabitArgs(Habit Habit, int TargetFolderId);
+
+    public MainWindowViewModel() {
+        if (Design.IsDesignMode) {
             _habitService = null!;
             return;
         }
-    
+
         _habitService = new HabitService();
+
+        // Tenta rodar o reset. Se rodar (virou o dia), recarrega tudo.
+        if (_habitService.ProcessDailyReset()) {
+            // Notifica o usuário com um popup se desejar
+        }
         LoadHabits();
+
     }
 
-    private void LoadHabits()
-    {
+    private void LoadHabits() {
         _allHabits = _habitService.GetHabits();
 
-        if (KanbanColumns.Count == 0)
-        {
+        if (KanbanColumns.Count == 0) {
             KanbanColumns.Add(new KanbanColumnViewModel(1, "To-Do"));
             KanbanColumns.Add(new KanbanColumnViewModel(2, "In-Progress"));
             KanbanColumns.Add(new KanbanColumnViewModel(3, "Done"));
@@ -1475,13 +1504,11 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task CompleteHabit(Habit habit)
-    {
+    private async Task CompleteHabit(Habit habit) {
         var result = _habitService.CompleteHabit(habit.Id);
         LoadHabits();
 
-        if (result.AlreadyCompleted)
-        {
+        if (result.AlreadyCompleted) {
             var box = MessageBoxManager.GetMessageBoxStandard(
                 "Already Done!",
                 $"'{habit.Name}' already completed today!",
@@ -1490,8 +1517,7 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        if (result.LeveledUp)
-        {
+        if (result.LeveledUp) {
             var box = MessageBoxManager.GetMessageBoxStandard(
                 "🎉 Level Up!",
                 $"You reached Level {result.NewLevel} - {LevelSystem.GetLevelName(result.NewLevel)}!",
@@ -1503,8 +1529,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task OpenCreateHabit()
-    {
+    private async Task OpenCreateHabit() {
         var mainWindow = (Application.Current?.ApplicationLifetime
             as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
 
@@ -1515,8 +1540,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         await dialog.ShowDialog(mainWindow);
 
-        if (viewModel.Confirmed)
-        {
+        if (viewModel.Confirmed) {
             var result = _habitService.CreateHabit(viewModel.Name, viewModel.Description, viewModel.Difficulty,
                 viewModel.Category);
 
@@ -1527,8 +1551,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task DeleteHabit(Habit habit)
-    {
+    private async Task DeleteHabit(Habit habit) {
         var box = MessageBoxManager.GetMessageBoxStandard(
             "Delete Habit",
             $"Are you sure you want to delete '{habit.Name}'?",
@@ -1536,16 +1559,14 @@ public partial class MainWindowViewModel : ViewModelBase
 
         var result = await box.ShowAsync();
 
-        if (result == ButtonResult.Yes)
-        {
+        if (result == ButtonResult.Yes) {
             _habitService.DeleteHabit(habit.Id);
             LoadHabits();
         }
     }
 
     [RelayCommand]
-    private async Task OpenHabitHistory(Habit habit)
-    {
+    private async Task OpenHabitHistory(Habit habit) {
         var mainWindow = (Application.Current?.ApplicationLifetime
             as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
 
@@ -1558,10 +1579,8 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void ShowTab(ActiveTab tab) => ActiveTab = tab;
 
-    private async Task ShowAchievementPopups(List<Achievement> achievements)
-    {
-        foreach (var achievement in achievements)
-        {
+    private async Task ShowAchievementPopups(List<Achievement> achievements) {
+        foreach (var achievement in achievements) {
             var box = MessageBoxManager.GetMessageBoxStandard("🏆 Achievement Unlocked!",
                 $"{achievement.Icon} {achievement.Name}\n{achievement.Description}",
                 ButtonEnum.Ok);
@@ -1570,8 +1589,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task OpenEditProfile()
-    {
+    private async Task OpenEditProfile() {
         var mainWindow = (Application.Current?.ApplicationLifetime
             as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
 
@@ -1583,8 +1601,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         await dialog.ShowDialog(mainWindow);
 
-        if (viewModel.Confirmed)
-        {
+        if (viewModel.Confirmed) {
             profile.UserName = viewModel.UserName;
             profile.Description = viewModel.Description;
             profile.Gender = viewModel.Gender;
@@ -1596,6 +1613,26 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand]
+    public void ChangeHabitStatus(MoveHabitArgs args) {
+        if (args == null) return;
+        var habit = args.Habit;
+        var targetFolderId = args.TargetFolderId;
+
+        // 1. Atualiza o Service (Persistência e Regra de Negócio)
+        _habitService.MoveHabitToFolder(habit.Id, targetFolderId);
+
+        // 2. Atualiza a UI (Remover da coluna antiga, adicionar na nova)
+        var oldColumn = KanbanColumns.First(c => c.Id != targetFolderId && c.Habits.Contains(habit));
+        var newColumn = KanbanColumns.First(c => c.Id == targetFolderId);
+
+        oldColumn.Habits.Remove(habit);
+        newColumn.Habits.Add(habit);
+
+        // 3. Atualiza os status globais de XP e Nível
+        RefreshXpStats();
+    }
+
     public List<Category?> Categories { get; } = new()
     {
         null,
@@ -1605,10 +1642,8 @@ public partial class MainWindowViewModel : ViewModelBase
         Category.Personal
     };
 
-    private void ApplyFilter()
-    {
-        foreach (var column in KanbanColumns)
-        {
+    private void ApplyFilter() {
+        foreach (var column in KanbanColumns) {
             column.Habits.Clear();
         }
 
@@ -1616,25 +1651,21 @@ public partial class MainWindowViewModel : ViewModelBase
             ? _allHabits
             : _allHabits.Where(h => h.Category == SelectedCategory);
 
-        foreach (var habit in filteredHabits)
-        {
+        foreach (var habit in filteredHabits) {
             int targetFolder = habit.FolderId > 0 ? habit.FolderId : 1;
 
             var targetColumn = KanbanColumns.FirstOrDefault(c => c.Id == targetFolder);
-            if (targetColumn != null)
-            {
+            if (targetColumn != null) {
                 targetColumn.Habits.Add(habit);
             }
         }
     }
 
-    partial void OnSelectedCategoryChanged(Category? value)
-    {
+    partial void OnSelectedCategoryChanged(Category? value) {
         ApplyFilter();
     }
 
-    private void LoadProfile()
-    {
+    private void LoadProfile() {
         var profile = _habitService.GetProfile();
         ProfileUserName = string.IsNullOrEmpty(profile.UserName) ? "No name set" : profile.UserName;
         ProfileDescription = string.IsNullOrEmpty(profile.Description) ? "No description set" : profile.Description;
@@ -1646,8 +1677,7 @@ public partial class MainWindowViewModel : ViewModelBase
         GlobalLongestStreak = profile.GlobalLongestStreak;
     }
 
-    private void LoadStatistics()
-    {
+    private void LoadStatistics() {
         var stats = _habitService.Statistics.GetStatistics();
 
         StatTotalHabits = stats.TotalHabits;
@@ -1661,6 +1691,15 @@ public partial class MainWindowViewModel : ViewModelBase
 
         StatBestStreakName = stats.BestStreak?.Name ?? "No habits yet";
         StatBestStreakDays = stats.BestStreak?.CurrentStreak ?? 0;
+    }
+
+    private void RefreshXpStats() {
+        int totalXp = _habitService.GetProfile().TotalXp;
+        Level = LevelSystem.CalculateLevel(totalXp);
+        LevelName = LevelSystem.GetLevelName(Level);
+        CurrentXp = totalXp;
+        XpInCurrentLevel = LevelSystem.GetXpProgressInCurrentLevel(totalXp, Level);
+        XpForNextLevel = LevelSystem.GetXpForNextLevel(Level);
     }
 }
 === ARQUIVO: ./HabitTracker.Desktop/ViewModels/ViewModelBase.cs ===
@@ -1960,618 +1999,618 @@ public partial class HabitHistoryDialog : Window
         MinWidth="800"
         MinHeight="600">
 
-    <Design.DataContext>
-        <vm:MainWindowViewModel />
-    </Design.DataContext>
+	<Design.DataContext>
+		<vm:MainWindowViewModel />
+	</Design.DataContext>
 
-    <Window.Resources>
-        <converters:CategoryDisplayConverter x:Key="CategoryDisplayConverter" />
-        <converters:TabVisibilityConverter x:Key="TabVisibilityConverter" />
-        <converters:BoolToOpacityConverter x:Key="BoolToOpacityConverter" />
-        <converters:TabActiveBackgroundConverter x:Key="TabActiveBackgroundConverter" />
-        <converters:TabActiveForegroundConverter x:Key="TabActiveForegroundConverter" />
-        <converters:DifficultyColorConverter x:Key="DifficultyColorConverter" />
-        <converters:DifficultyBgConverter x:Key="DifficultyBgConverter" />
-        <converters:HabitStatusAccentConverter x:Key="HabitStatusAccentConverter" />
-        <converters:HabitDoneLabelConverter x:Key="HabitDoneLabelConverter" />
+	<Window.Resources>
+		<converters:CategoryDisplayConverter x:Key="CategoryDisplayConverter" />
+		<converters:TabVisibilityConverter x:Key="TabVisibilityConverter" />
+		<converters:BoolToOpacityConverter x:Key="BoolToOpacityConverter" />
+		<converters:TabActiveBackgroundConverter x:Key="TabActiveBackgroundConverter" />
+		<converters:TabActiveForegroundConverter x:Key="TabActiveForegroundConverter" />
+		<converters:DifficultyColorConverter x:Key="DifficultyColorConverter" />
+		<converters:DifficultyBgConverter x:Key="DifficultyBgConverter" />
+		<converters:HabitStatusAccentConverter x:Key="HabitStatusAccentConverter" />
+		<converters:HabitDoneLabelConverter x:Key="HabitDoneLabelConverter" />
 
-        <SolidColorBrush x:Key="ColorBg">#0a0a0b</SolidColorBrush>
-        <SolidColorBrush x:Key="ColorSurface">#141416</SolidColorBrush>
-        <SolidColorBrush x:Key="ColorSurfaceAlt">#1f1f22</SolidColorBrush>
-        <SolidColorBrush x:Key="ColorAccent">#8b5cf6</SolidColorBrush>
-        <SolidColorBrush x:Key="ColorAccentAlt">#7c3aed</SolidColorBrush>
-        <SolidColorBrush x:Key="ColorGold">#f59e0b</SolidColorBrush>
-        <SolidColorBrush x:Key="ColorTextPrimary">#f1f5f9</SolidColorBrush>
-        <SolidColorBrush x:Key="ColorTextSecondary">#94a3b8</SolidColorBrush>
-        <SolidColorBrush x:Key="ColorDanger">#b24b57</SolidColorBrush>
-        <SolidColorBrush x:Key="ColorBorder">#1AFFFFFF</SolidColorBrush>
+		<SolidColorBrush x:Key="ColorBg">#0a0a0b</SolidColorBrush>
+		<SolidColorBrush x:Key="ColorSurface">#141416</SolidColorBrush>
+		<SolidColorBrush x:Key="ColorSurfaceAlt">#1f1f22</SolidColorBrush>
+		<SolidColorBrush x:Key="ColorAccent">#8b5cf6</SolidColorBrush>
+		<SolidColorBrush x:Key="ColorAccentAlt">#7c3aed</SolidColorBrush>
+		<SolidColorBrush x:Key="ColorGold">#f59e0b</SolidColorBrush>
+		<SolidColorBrush x:Key="ColorTextPrimary">#f1f5f9</SolidColorBrush>
+		<SolidColorBrush x:Key="ColorTextSecondary">#94a3b8</SolidColorBrush>
+		<SolidColorBrush x:Key="ColorDanger">#b24b57</SolidColorBrush>
+		<SolidColorBrush x:Key="ColorBorder">#1AFFFFFF</SolidColorBrush>
 
-        <CornerRadius x:Key="RadiusSm">8</CornerRadius>
-        <CornerRadius x:Key="RadiusMd">12</CornerRadius>
-        <CornerRadius x:Key="RadiusLg">16</CornerRadius>
-        <Thickness x:Key="PadButton">12,8</Thickness>
-        <Thickness x:Key="PadCard">20</Thickness>
-    </Window.Resources>
+		<CornerRadius x:Key="RadiusSm">8</CornerRadius>
+		<CornerRadius x:Key="RadiusMd">12</CornerRadius>
+		<CornerRadius x:Key="RadiusLg">16</CornerRadius>
+		<Thickness x:Key="PadButton">12,8</Thickness>
+		<Thickness x:Key="PadCard">20</Thickness>
+	</Window.Resources>
 
-    <Window.Styles>
-        <Style Selector="Button.nav">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="{StaticResource ColorTextSecondary}" />
-            <Setter Property="Padding" Value="{StaticResource PadButton}" />
-            <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-        </Style>
-        <Style Selector="Button.nav:pointerover">
-            <Setter Property="Background" Value="#0DFFFFFF" />
-            <Setter Property="Foreground" Value="{StaticResource ColorTextPrimary}" />
-        </Style>
+	<Window.Styles>
+		<Style Selector="Button.nav">
+			<Setter Property="Background" Value="Transparent" />
+			<Setter Property="Foreground" Value="{StaticResource ColorTextSecondary}" />
+			<Setter Property="Padding" Value="{StaticResource PadButton}" />
+			<Setter Property="CornerRadius" Value="10" />
+			<Setter Property="BorderThickness" Value="0" />
+			<Setter Property="FontWeight" Value="SemiBold" />
+		</Style>
+		<Style Selector="Button.nav:pointerover">
+			<Setter Property="Background" Value="#0DFFFFFF" />
+			<Setter Property="Foreground" Value="{StaticResource ColorTextPrimary}" />
+		</Style>
 
-        <Style Selector="Button.primary">
-            <Setter Property="Background" Value="{StaticResource ColorAccent}" />
-            <Setter Property="Foreground" Value="#ffffff" />
-            <Setter Property="CornerRadius" Value="{StaticResource RadiusSm}" />
-            <Setter Property="Padding" Value="{StaticResource PadButton}" />
-            <Setter Property="BorderBrush" Value="{StaticResource ColorAccent}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="FontWeight" Value="Bold" />
-        </Style>
-        <Style Selector="Button.primary:pointerover">
-            <Setter Property="Background" Value="{StaticResource ColorAccentAlt}" />
-        </Style>
+		<Style Selector="Button.primary">
+			<Setter Property="Background" Value="{StaticResource ColorAccent}" />
+			<Setter Property="Foreground" Value="#ffffff" />
+			<Setter Property="CornerRadius" Value="{StaticResource RadiusSm}" />
+			<Setter Property="Padding" Value="{StaticResource PadButton}" />
+			<Setter Property="BorderBrush" Value="{StaticResource ColorAccent}" />
+			<Setter Property="BorderThickness" Value="1" />
+			<Setter Property="FontWeight" Value="Bold" />
+		</Style>
+		<Style Selector="Button.primary:pointerover">
+			<Setter Property="Background" Value="{StaticResource ColorAccentAlt}" />
+		</Style>
 
-        <Style Selector="Button.secondary">
-            <Setter Property="Background" Value="#0DFFFFFF" />
-            <Setter Property="Foreground" Value="{StaticResource ColorTextSecondary}" />
-            <Setter Property="CornerRadius" Value="{StaticResource RadiusSm}" />
-            <Setter Property="Padding" Value="10,8" />
-            <Setter Property="BorderBrush" Value="{StaticResource ColorBorder}" />
-            <Setter Property="BorderThickness" Value="1" />
-        </Style>
-        <Style Selector="Button.secondary:pointerover">
-            <Setter Property="Background" Value="#14FFFFFF" />
-            <Setter Property="Foreground" Value="{StaticResource ColorTextPrimary}" />
-        </Style>
+		<Style Selector="Button.secondary">
+			<Setter Property="Background" Value="#0DFFFFFF" />
+			<Setter Property="Foreground" Value="{StaticResource ColorTextSecondary}" />
+			<Setter Property="CornerRadius" Value="{StaticResource RadiusSm}" />
+			<Setter Property="Padding" Value="10,8" />
+			<Setter Property="BorderBrush" Value="{StaticResource ColorBorder}" />
+			<Setter Property="BorderThickness" Value="1" />
+		</Style>
+		<Style Selector="Button.secondary:pointerover">
+			<Setter Property="Background" Value="#14FFFFFF" />
+			<Setter Property="Foreground" Value="{StaticResource ColorTextPrimary}" />
+		</Style>
 
-        <Style Selector="Button.danger">
-            <Setter Property="Background" Value="{StaticResource ColorDanger}" />
-            <Setter Property="Foreground" Value="{StaticResource ColorTextPrimary}" />
-            <Setter Property="CornerRadius" Value="{StaticResource RadiusSm}" />
-            <Setter Property="Padding" Value="{StaticResource PadButton}" />
-            <Setter Property="BorderBrush" Value="{StaticResource ColorDanger}" />
-            <Setter Property="BorderThickness" Value="1" />
-        </Style>
-        <Style Selector="Button.danger:pointerover">
-            <Setter Property="Background" Value="#c45864" />
-        </Style>
+		<Style Selector="Button.danger">
+			<Setter Property="Background" Value="{StaticResource ColorDanger}" />
+			<Setter Property="Foreground" Value="{StaticResource ColorTextPrimary}" />
+			<Setter Property="CornerRadius" Value="{StaticResource RadiusSm}" />
+			<Setter Property="Padding" Value="{StaticResource PadButton}" />
+			<Setter Property="BorderBrush" Value="{StaticResource ColorDanger}" />
+			<Setter Property="BorderThickness" Value="1" />
+		</Style>
+		<Style Selector="Button.danger:pointerover">
+			<Setter Property="Background" Value="#c45864" />
+		</Style>
 
-        <Style Selector="Border.card">
-            <Setter Property="Background" Value="{StaticResource ColorSurface}" />
-            <Setter Property="CornerRadius" Value="{StaticResource RadiusLg}" />
-            <Setter Property="BorderBrush" Value="{StaticResource ColorBorder}" />
-            <Setter Property="BorderThickness" Value="1" />
-        </Style>
+		<Style Selector="Border.card">
+			<Setter Property="Background" Value="{StaticResource ColorSurface}" />
+			<Setter Property="CornerRadius" Value="{StaticResource RadiusLg}" />
+			<Setter Property="BorderBrush" Value="{StaticResource ColorBorder}" />
+			<Setter Property="BorderThickness" Value="1" />
+		</Style>
 
-        <Style Selector="TextBlock.title">
-            <Setter Property="Foreground" Value="{StaticResource ColorTextPrimary}" />
-            <Setter Property="FontWeight" Value="Bold" />
-        </Style>
+		<Style Selector="TextBlock.title">
+			<Setter Property="Foreground" Value="{StaticResource ColorTextPrimary}" />
+			<Setter Property="FontWeight" Value="Bold" />
+		</Style>
 
-        <Style Selector="TextBlock.subtle">
-            <Setter Property="Foreground" Value="{StaticResource ColorTextSecondary}" />
-        </Style>
-    </Window.Styles>
+		<Style Selector="TextBlock.subtle">
+			<Setter Property="Foreground" Value="{StaticResource ColorTextSecondary}" />
+		</Style>
+	</Window.Styles>
 
-    <DockPanel Margin="20">
+	<DockPanel Margin="20">
 
-        <!-- Header fixo no topo -->
-        <Border DockPanel.Dock="Top"
+		<!-- Header fixo no topo -->
+		<Border DockPanel.Dock="Top"
                 Padding="0,0,0,18"
                 BorderBrush="{StaticResource ColorBorder}"
                 BorderThickness="0,0,0,1">
-            <Grid ColumnDefinitions="*,Auto">
+			<Grid ColumnDefinitions="*,Auto">
 
-                <StackPanel Grid.Column="0">
-                    <TextBlock Text="🎯 HabitTracker"
+				<StackPanel Grid.Column="0">
+					<TextBlock Text="🎯 HabitTracker"
                                FontSize="24"
                                FontWeight="Bold"
                                Foreground="{StaticResource ColorTextPrimary}" />
-                    <TextBlock Text="{Binding LevelName}"
+					<TextBlock Text="{Binding LevelName}"
                                FontSize="14"
                                Foreground="{StaticResource ColorTextSecondary}" />
-                </StackPanel>
+				</StackPanel>
 
-                <Border Grid.Column="1" Classes="card" Padding="16,12" VerticalAlignment="Center">
-                    <StackPanel Spacing="6">
-                        <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock FontSize="12" Classes="subtle" Text="{Binding LevelName}" />
-                            <TextBlock Grid.Column="1" FontSize="12" FontWeight="Bold"
+				<Border Grid.Column="1" Classes="card" Padding="16,12" VerticalAlignment="Center">
+					<StackPanel Spacing="6">
+						<Grid ColumnDefinitions="*,Auto">
+							<TextBlock FontSize="12" Classes="subtle" Text="{Binding LevelName}" />
+							<TextBlock Grid.Column="1" FontSize="12" FontWeight="Bold"
                                        Foreground="{StaticResource ColorTextPrimary}">
-                                <Run Text="Lv. " />
-                                <Run Text="{Binding Level}" />
-                            </TextBlock>
-                        </Grid>
-                        <ProgressBar Minimum="0"
+								<Run Text="Lv. " />
+								<Run Text="{Binding Level}" />
+							</TextBlock>
+						</Grid>
+						<ProgressBar Minimum="0"
                                      Maximum="{Binding XpForNextLevel}"
                                      Value="{Binding XpInCurrentLevel}"
                                      Height="6"
                                      Foreground="{StaticResource ColorAccent}"
                                      Background="{StaticResource ColorSurfaceAlt}" />
-                        <TextBlock FontSize="10" Classes="subtle" HorizontalAlignment="Right">
-                            <Run Text="{Binding XpInCurrentLevel}" />
-                            <Run Text=" / " />
-                            <Run Text="{Binding XpForNextLevel}" />
-                            <Run Text=" XP" />
-                        </TextBlock>
-                    </StackPanel>
-                </Border>
+						<TextBlock FontSize="10" Classes="subtle" HorizontalAlignment="Right">
+							<Run Text="{Binding XpInCurrentLevel}" />
+							<Run Text=" / " />
+							<Run Text="{Binding XpForNextLevel}" />
+							<Run Text=" XP" />
+						</TextBlock>
+					</StackPanel>
+				</Border>
 
-            </Grid>
-        </Border>
+			</Grid>
+		</Border>
 
-        <Border DockPanel.Dock="Top"
+		<Border DockPanel.Dock="Top"
                 Classes="card"
                 CornerRadius="{StaticResource RadiusLg}"
                 Padding="16,14"
                 Margin="0,16,0,20">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Classes="nav"
+			<Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+				<StackPanel Orientation="Horizontal" Spacing="8">
+					<Button Classes="nav"
                             Content="📋 Habits"
                             Background="{Binding ActiveTab, Converter={StaticResource TabActiveBackgroundConverter}, ConverterParameter=Habits}"
                             Foreground="{Binding ActiveTab, Converter={StaticResource TabActiveForegroundConverter}, ConverterParameter=Habits}"
                             Command="{Binding ShowTabCommand}"
                             CommandParameter="{x:Static desktopModels:ActiveTab.Habits}" />
-                    <Button Classes="nav"
+					<Button Classes="nav"
                             Content="🏆 Achievements"
                             Background="{Binding ActiveTab, Converter={StaticResource TabActiveBackgroundConverter}, ConverterParameter=Achievements}"
                             Foreground="{Binding ActiveTab, Converter={StaticResource TabActiveForegroundConverter}, ConverterParameter=Achievements}"
                             Command="{Binding ShowTabCommand}"
                             CommandParameter="{x:Static desktopModels:ActiveTab.Achievements}" />
-                    <Button Classes="nav"
+					<Button Classes="nav"
                             Content="👤 Profile"
                             Background="{Binding ActiveTab, Converter={StaticResource TabActiveBackgroundConverter}, ConverterParameter=Profile}"
                             Foreground="{Binding ActiveTab, Converter={StaticResource TabActiveForegroundConverter}, ConverterParameter=Profile}"
                             Command="{Binding ShowTabCommand}"
                             CommandParameter="{x:Static desktopModels:ActiveTab.Profile}" />
-                    <Button Classes="nav"
+					<Button Classes="nav"
                             Content="📊 Statistics"
                             Background="{Binding ActiveTab, Converter={StaticResource TabActiveBackgroundConverter}, ConverterParameter=Statistics}"
                             Foreground="{Binding ActiveTab, Converter={StaticResource TabActiveForegroundConverter}, ConverterParameter=Statistics}"
                             Command="{Binding ShowTabCommand}"
                             CommandParameter="{x:Static desktopModels:ActiveTab.Statistics}" />
-                </StackPanel>
+				</StackPanel>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12"
+				<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12"
                             VerticalAlignment="Center">
-                    <ComboBox ItemsSource="{Binding Categories}"
+					<ComboBox ItemsSource="{Binding Categories}"
                               SelectedItem="{Binding SelectedCategory}"
                               Width="140"
                               Background="{StaticResource ColorSurfaceAlt}"
                               Foreground="{StaticResource ColorTextPrimary}"
                               BorderBrush="{StaticResource ColorBorder}">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock
+						<ComboBox.ItemTemplate>
+							<DataTemplate>
+								<TextBlock
                                     Text="{Binding Converter={StaticResource CategoryDisplayConverter}}" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                    <Button Classes="primary"
+							</DataTemplate>
+						</ComboBox.ItemTemplate>
+					</ComboBox>
+					<Button Classes="primary"
                             Content="+ New Habit"
                             Command="{Binding OpenCreateHabitCommand}" />
-                </StackPanel>
-            </Grid>
-        </Border>
+				</StackPanel>
+			</Grid>
+		</Border>
 
-        <Grid>
-            <!-- Aba Habits -->
-            <Grid
+		<Grid>
+			<!-- Aba Habits -->
+			<Grid
                 IsVisible="{Binding ActiveTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=Habits}"
                 RowDefinitions="Auto, *">
 
-                <!-- <Grid Grid.Row="0" ColumnDefinitions="Auto, *" Margin="0,0,0,20"> -->
-                <!--     <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"> -->
-                <!--         <TextBlock Text="📁 Category:" -->
-                <!--                    VerticalAlignment="Center" -->
-                <!--                    Foreground="{StaticResource ColorTextSecondary}" /> -->
-                <!--         <ComboBox ItemsSource="{Binding Categories}" -->
-                <!--                   SelectedItem="{Binding SelectedCategory}" -->
-                <!--                   Width="150"> -->
-                <!--             <ComboBox.ItemTemplate> -->
-                <!--                 <DataTemplate> -->
-                <!--                     <TextBlock -->
-                <!--                         Text="{Binding Converter={StaticResource CategoryDisplayConverter}}" /> -->
-                <!--                 </DataTemplate> -->
-                <!--             </ComboBox.ItemTemplate> -->
-                <!--         </ComboBox> -->
-                <!--     </StackPanel> -->
-                <!-- -->
-                <!--     <Button Command="{Binding OpenCreateHabitCommand}" -->
-                <!--             Content="+ New Habit" -->
-                <!--             Classes="accent" -->
-                <!--             Padding="12,8" -->
-                <!--             FontWeight="Bold" /> -->
-                <!-- </Grid> -->
+				<!-- <Grid Grid.Row="0" ColumnDefinitions="Auto, *" Margin="0,0,0,20"> -->
+				<!--     <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"> -->
+				<!--         <TextBlock Text="📁 Category:" -->
+				<!--                    VerticalAlignment="Center" -->
+				<!--                    Foreground="{StaticResource ColorTextSecondary}" /> -->
+				<!--         <ComboBox ItemsSource="{Binding Categories}" -->
+				<!--                   SelectedItem="{Binding SelectedCategory}" -->
+				<!--                   Width="150"> -->
+				<!--             <ComboBox.ItemTemplate> -->
+				<!--                 <DataTemplate> -->
+				<!--                     <TextBlock -->
+				<!--                         Text="{Binding Converter={StaticResource CategoryDisplayConverter}}" /> -->
+				<!--                 </DataTemplate> -->
+				<!--             </ComboBox.ItemTemplate> -->
+				<!--         </ComboBox> -->
+				<!--     </StackPanel> -->
+				<!-- -->
+				<!--     <Button Command="{Binding OpenCreateHabitCommand}" -->
+				<!--             Content="+ New Habit" -->
+				<!--             Classes="accent" -->
+				<!--             Padding="12,8" -->
+				<!--             FontWeight="Bold" /> -->
+				<!-- </Grid> -->
 
-                <ItemsControl Grid.Row="1" ItemsSource="{Binding KanbanColumns}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <UniformGrid Rows="1" Columns="3" Margin="0"
+				<ItemsControl Grid.Row="1" ItemsSource="{Binding KanbanColumns}">
+					<ItemsControl.ItemsPanel>
+						<ItemsPanelTemplate>
+							<UniformGrid Rows="1" Columns="3" Margin="0"
                                          HorizontalAlignment="Stretch" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
+						</ItemsPanelTemplate>
+					</ItemsControl.ItemsPanel>
 
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:KanbanColumnViewModel">
-                            <Border Background="#121214" CornerRadius="8" Margin="6" Padding="12">
-                                <DockPanel LastChildFill="True">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate x:DataType="vm:KanbanColumnViewModel">
+							<Border Background="#121214" CornerRadius="8" Margin="6" Padding="12">
+								<DockPanel LastChildFill="True">
 
-                                    <Border DockPanel.Dock="Top" Background="#1a1a1e"
+									<Border DockPanel.Dock="Top" Background="#1a1a1e"
                                             CornerRadius="6">
-                                        <DockPanel>
-                                            <TextBlock Text="{Binding Title}"
+										<DockPanel>
+											<TextBlock Text="{Binding Title}"
                                                        FontWeight="Bold"
                                                        FontSize="16"
                                                        Foreground="{StaticResource ColorTextPrimary}" />
-                                            <Border Background="#2a2a30"
+											<Border Background="#2a2a30"
                                                     CornerRadius="10"
                                                     Padding="6,2"
                                                     HorizontalAlignment="Right">
-                                                <TextBlock Text="{Binding Habits.Count}"
+												<TextBlock Text="{Binding Habits.Count}"
                                                            FontSize="12"
                                                            FontWeight="Bold"
                                                            Foreground="{StaticResource ColorTextSecondary}" />
-                                            </Border>
-                                        </DockPanel>
-                                    </Border>
-                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                        <ItemsControl ItemsSource="{Binding Habits}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border Classes="card" Margin="0,0,0,10" Padding="14"
+											</Border>
+										</DockPanel>
+									</Border>
+									<ScrollViewer VerticalScrollBarVisibility="Auto">
+										<ItemsControl ItemsSource="{Binding Habits}">
+											<ItemsControl.ItemTemplate>
+												<DataTemplate>
+													<Border Classes="card" Margin="0,0,0,10" Padding="14"
                                                             Background="#1e1a1e">
-                                                        <StackPanel Spacing="8">
+														<StackPanel Spacing="8">
 
-                                                            <DockPanel>
-                                                                <TextBlock Text="{Binding Name}" FontSize="15"
+															<DockPanel>
+																<TextBlock Text="{Binding Name}" FontSize="15"
                                                                            FontWeight="Bold"
                                                                            Foreground="{StaticResource ColorTextPrimary}"
                                                                            TextWrapping="Wrap" MaxWidth="180" />
-                                                                <Border
+																<Border
                                                                     Background="{Binding Difficulty, Converter={StaticResource DifficultyBgConverter}}"
                                                                     CornerRadius="4" Padding="6,2"
                                                                     HorizontalAlignment="Right" VerticalAlignment="Top">
-                                                                    <TextBlock Text="{Binding Difficulty}"
+																	<TextBlock Text="{Binding Difficulty}"
                                                                                FontSize="10" FontWeight="Bold"
                                                                                Foreground="{Binding Difficulty, Converter={StaticResource DifficultyColorConverter}}">
-                                                                    </TextBlock>
-                                                                </Border>
-                                                            </DockPanel>
-                                                            <TextBlock Text="{Binding Description}" FontSize="12"
+																	</TextBlock>
+																</Border>
+															</DockPanel>
+															<TextBlock Text="{Binding Description}" FontSize="12"
                                                                        Foreground="{StaticResource ColorTextSecondary}"
                                                                        TextWrapping="Wrap" Margin="0,2,0,4"
                                                                        IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
-                                                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                <TextBlock Text="🔥" FontSize="12" />
-                                                                <TextBlock Text="{Binding CurrentStreak}" FontSize="12"
+															<StackPanel Orientation="Horizontal" Spacing="4">
+																<TextBlock Text="🔥" FontSize="12" />
+																<TextBlock Text="{Binding CurrentStreak}" FontSize="12"
                                                                            FontWeight="Bold"
                                                                            Foreground="{StaticResource ColorTextPrimary}" />
-                                                            </StackPanel>
+															</StackPanel>
 
-                                                            <Border BorderBrush="#2a2a30" BorderThickness="0,1,0,0"
+															<Border BorderBrush="#2a2a30" BorderThickness="0,1,0,0"
                                                                     Margin="0,4" Padding="0,4,0,0">
-                                                                <Grid ColumnDefinitions="*, Auto, Auto"
+																<Grid ColumnDefinitions="*, Auto, Auto"
                                                                       x:CompileBindings="False">
-                                                                    <Button Grid.Column="0"
+																	<Button Grid.Column="0"
                                                                             Command="{Binding $parent[Window].DataContext.CompleteHabitCommand}"
                                                                             CommandParameter="{Binding}"
                                                                             Content="{Binding Converter={StaticResource HabitDoneLabelConverter}}"
                                                                             Background="{Binding Converter={StaticResource HabitStatusAccentConverter}}"
                                                                             Foreground="White" FontSize="12" Padding="8,4" HorizontalAlignment="Left" CornerRadius="4"/>
-                                                                    <Button Grid.Column="1"
+																	<Button Grid.Column="1"
                                                                             Command="{Binding $parent[Window].DataContext.OpenHabitHistoryCommand}"
                                                                             CommandParameter="{Binding}"
                                                                             Content="📅" ToolTip.Tip="History"
                                                                             Background="Transparent" BorderThickness="0" Margin="4,0" Padding="6,4"/>
-                                                                    <Button Grid.Column="2"
+																	<Button Grid.Column="2"
                                                                             Command="{Binding $parent[Window].DataContext.DeleteHabitCommand}"
                                                                             CommandParameter="{Binding}"
                                                                             Content="🗑️" ToolTip.Tip="Delete"
                                                                             Background="Transparent"
                                                                             BorderThickness="0" Padding="6,4" />
-                                                                </Grid>
-                                                            </Border>
+																</Grid>
+															</Border>
 
 
-                                                        </StackPanel>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </ScrollViewer>
+														</StackPanel>
+													</Border>
+												</DataTemplate>
+											</ItemsControl.ItemTemplate>
+										</ItemsControl>
+									</ScrollViewer>
 
-                                </DockPanel>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </Grid>
+								</DockPanel>
+							</Border>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
+			</Grid>
 
-            <!-- Aba Achievements -->
-            <ScrollViewer
+			<!-- Aba Achievements -->
+			<ScrollViewer
                 IsVisible="{Binding ActiveTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=Achievements}">
-                <ItemsControl ItemsSource="{Binding Achievements}" Margin="20">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="models:Achievement">
-                            <Border Classes="card"
+				<ItemsControl ItemsSource="{Binding Achievements}" Margin="20">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate x:DataType="models:Achievement">
+							<Border Classes="card"
                                     Padding="{StaticResource PadCard}"
                                     Margin="0,0,0,12"
                                     Opacity="{Binding IsUnlocked, Converter={StaticResource BoolToOpacityConverter}}">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="{Binding Icon}"
+								<StackPanel Orientation="Horizontal">
+									<TextBlock Text="{Binding Icon}"
                                                FontSize="28"
                                                VerticalAlignment="Center"
                                                Margin="0,0,16,0" />
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Name}"
+									<StackPanel>
+										<TextBlock Text="{Binding Name}"
                                                    FontSize="16"
                                                    FontWeight="Bold"
                                                    Foreground="{StaticResource ColorTextPrimary}" />
-                                        <TextBlock Text="{Binding Description}"
+										<TextBlock Text="{Binding Description}"
                                                    FontSize="12"
                                                    Foreground="{StaticResource ColorTextSecondary}"
                                                    Margin="0,4,0,0" />
-                                    </StackPanel>
-                                </StackPanel>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+									</StackPanel>
+								</StackPanel>
+							</Border>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
+			</ScrollViewer>
 
-            <!-- Aba Profile -->
-            <ScrollViewer
+			<!-- Aba Profile -->
+			<ScrollViewer
                 IsVisible="{Binding ActiveTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=Profile}">
-                <StackPanel Margin="20" Spacing="16">
+				<StackPanel Margin="20" Spacing="16">
 
-                    <Border Classes="card" Padding="24">
-                        <StackPanel Spacing="12">
+					<Border Classes="card" Padding="24">
+						<StackPanel Spacing="12">
 
-                            <StackPanel Orientation="Horizontal" Spacing="16">
-                                <Border Width="72" Height="72"
+							<StackPanel Orientation="Horizontal" Spacing="16">
+								<Border Width="72" Height="72"
                                         CornerRadius="36"
                                         Background="{StaticResource ColorSurfaceAlt}">
-                                    <TextBlock Text="👤"
+									<TextBlock Text="👤"
                                                FontSize="32"
                                                HorizontalAlignment="Center"
                                                VerticalAlignment="Center" />
-                                </Border>
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding ProfileUserName}"
+								</Border>
+								<StackPanel VerticalAlignment="Center">
+									<TextBlock Text="{Binding ProfileUserName}"
                                                FontSize="22"
                                                FontWeight="Bold"
                                                Foreground="{StaticResource ColorTextPrimary}" />
-                                    <TextBlock FontSize="13"
+									<TextBlock FontSize="13"
                                                Foreground="{StaticResource ColorTextSecondary}">
-                                        <Run Text="Level " />
-                                        <Run Text="{Binding Level}" FontWeight="Bold" />
-                                        <Run Text=" · " />
-                                        <Run Text="{Binding LevelName}" />
-                                    </TextBlock>
-                                </StackPanel>
-                            </StackPanel>
+										<Run Text="Level " />
+										<Run Text="{Binding Level}" FontWeight="Bold" />
+										<Run Text=" · " />
+										<Run Text="{Binding LevelName}" />
+									</TextBlock>
+								</StackPanel>
+							</StackPanel>
 
-                            <TextBlock Text="{Binding ProfileDescription}"
+							<TextBlock Text="{Binding ProfileDescription}"
                                        FontSize="13"
                                        Foreground="{StaticResource ColorTextSecondary}"
                                        TextWrapping="Wrap" />
 
-                            <WrapPanel Orientation="Horizontal">
-                                <Border Background="{StaticResource ColorSurfaceAlt}"
+							<WrapPanel Orientation="Horizontal">
+								<Border Background="{StaticResource ColorSurfaceAlt}"
                                         CornerRadius="{StaticResource RadiusSm}"
                                         Padding="10,6"
                                         Margin="0,0,8,8">
-                                    <TextBlock FontSize="12"
+									<TextBlock FontSize="12"
                                                Foreground="{StaticResource ColorTextPrimary}">
-                                        <Run Text="⚧ " />
-                                        <Run Text="{Binding ProfileGender}" />
-                                    </TextBlock>
-                                </Border>
-                                <Border Background="{StaticResource ColorSurfaceAlt}"
+										<Run Text="⚧ " />
+										<Run Text="{Binding ProfileGender}" />
+									</TextBlock>
+								</Border>
+								<Border Background="{StaticResource ColorSurfaceAlt}"
                                         CornerRadius="{StaticResource RadiusSm}"
                                         Padding="10,6"
                                         Margin="0,0,8,8">
-                                    <TextBlock FontSize="12"
+									<TextBlock FontSize="12"
                                                Foreground="{StaticResource ColorTextPrimary}">
-                                        <Run Text="🎂 " />
-                                        <Run Text="{Binding ProfileDateOfBirth}" />
-                                    </TextBlock>
-                                </Border>
-                                <Border Background="{StaticResource ColorSurfaceAlt}"
+										<Run Text="🎂 " />
+										<Run Text="{Binding ProfileDateOfBirth}" />
+									</TextBlock>
+								</Border>
+								<Border Background="{StaticResource ColorSurfaceAlt}"
                                         CornerRadius="{StaticResource RadiusSm}"
                                         Padding="10,6"
                                         Margin="0,0,8,8">
-                                    <TextBlock FontSize="12"
+									<TextBlock FontSize="12"
                                                Foreground="{StaticResource ColorTextPrimary}">
-                                        <Run Text="📅 Member since " />
-                                        <Run Text="{Binding ProfileMemberSince}" />
-                                    </TextBlock>
-                                </Border>
-                            </WrapPanel>
+										<Run Text="📅 Member since " />
+										<Run Text="{Binding ProfileMemberSince}" />
+									</TextBlock>
+								</Border>
+							</WrapPanel>
 
-                        </StackPanel>
-                    </Border>
+						</StackPanel>
+					</Border>
 
-                    <Border Classes="card" Padding="24">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="Stats"
+					<Border Classes="card" Padding="24">
+						<StackPanel Spacing="8">
+							<TextBlock Text="Stats"
                                        FontSize="16"
                                        FontWeight="Bold"
                                        Foreground="{StaticResource ColorTextPrimary}" />
-                            <TextBlock FontSize="13"
+							<TextBlock FontSize="13"
                                        Foreground="{StaticResource ColorTextSecondary}">
-                                <Run Text="⭐ Total XP: " />
-                                <Run Text="{Binding CurrentXp}" FontWeight="Bold"
+								<Run Text="⭐ Total XP: " />
+								<Run Text="{Binding CurrentXp}" FontWeight="Bold"
                                      Foreground="{StaticResource ColorTextPrimary}" />
-                            </TextBlock>
-                            <TextBlock FontSize="13"
+							</TextBlock>
+							<TextBlock FontSize="13"
                                        Foreground="{StaticResource ColorTextSecondary}">
-                                <Run Text="🔥 Global Longest Streak: " />
-                                <Run Text="{Binding GlobalLongestStreak}" FontWeight="Bold"
+								<Run Text="🔥 Global Longest Streak: " />
+								<Run Text="{Binding GlobalLongestStreak}" FontWeight="Bold"
                                      Foreground="{StaticResource ColorTextPrimary}" />
-                                <Run Text=" days" />
-                            </TextBlock>
-                        </StackPanel>
-                    </Border>
+								<Run Text=" days" />
+							</TextBlock>
+						</StackPanel>
+					</Border>
 
-                    <StackPanel Orientation="Horizontal" Spacing="12">
-                        <Button Classes="primary"
+					<StackPanel Orientation="Horizontal" Spacing="12">
+						<Button Classes="primary"
                                 Content="✏️ Edit Profile"
                                 Command="{Binding OpenEditProfileCommand}"
                                 Padding="16,10" />
-                        <Button Classes="secondary"
+						<Button Classes="secondary"
                                 Content="👁 Preview"
                                 Padding="16,10" />
-                    </StackPanel>
+					</StackPanel>
 
-                </StackPanel>
-            </ScrollViewer>
+				</StackPanel>
+			</ScrollViewer>
 
-            <!-- Aba Statistics -->
-            <ScrollViewer
+			<!-- Aba Statistics -->
+			<ScrollViewer
                 IsVisible="{Binding ActiveTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=Statistics}">
-                <StackPanel Margin="20" Spacing="16">
+				<StackPanel Margin="20" Spacing="16">
 
-                    <Border Classes="card" Padding="24">
-                        <StackPanel Spacing="12">
-                            <TextBlock Text="📊 Overview"
+					<Border Classes="card" Padding="24">
+						<StackPanel Spacing="12">
+							<TextBlock Text="📊 Overview"
                                        FontSize="18"
                                        FontWeight="Bold"
                                        Foreground="{StaticResource ColorTextPrimary}" />
 
-                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto"
+							<Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto"
                                   RowSpacing="10" ColumnSpacing="10">
-                                <Border Grid.Row="0" Grid.Column="0"
+								<Border Grid.Row="0" Grid.Column="0"
                                         Background="{StaticResource ColorSurfaceAlt}"
                                         CornerRadius="{StaticResource RadiusSm}"
                                         Padding="12">
-                                    <StackPanel>
-                                        <TextBlock Text="Total Habits"
+									<StackPanel>
+										<TextBlock Text="Total Habits"
                                                    Foreground="{StaticResource ColorTextSecondary}"
                                                    FontSize="12" />
-                                        <TextBlock Text="{Binding StatTotalHabits}"
+										<TextBlock Text="{Binding StatTotalHabits}"
                                                    Foreground="{StaticResource ColorTextPrimary}"
                                                    FontSize="20"
                                                    FontWeight="Bold" />
-                                    </StackPanel>
-                                </Border>
+									</StackPanel>
+								</Border>
 
-                                <Border Grid.Row="0" Grid.Column="1"
+								<Border Grid.Row="0" Grid.Column="1"
                                         Background="{StaticResource ColorSurfaceAlt}"
                                         CornerRadius="{StaticResource RadiusSm}"
                                         Padding="12">
-                                    <StackPanel>
-                                        <TextBlock Text="Completed Today"
+									<StackPanel>
+										<TextBlock Text="Completed Today"
                                                    Foreground="{StaticResource ColorTextSecondary}"
                                                    FontSize="12" />
-                                        <TextBlock Text="{Binding StatCompletedToday}"
+										<TextBlock Text="{Binding StatCompletedToday}"
                                                    Foreground="{StaticResource ColorTextPrimary}"
                                                    FontSize="20"
                                                    FontWeight="Bold" />
-                                    </StackPanel>
-                                </Border>
+									</StackPanel>
+								</Border>
 
-                                <Border Grid.Row="1" Grid.Column="0"
+								<Border Grid.Row="1" Grid.Column="0"
                                         Background="{StaticResource ColorSurfaceAlt}"
                                         CornerRadius="{StaticResource RadiusSm}"
                                         Padding="12">
-                                    <StackPanel>
-                                        <TextBlock Text="Total Completions"
+									<StackPanel>
+										<TextBlock Text="Total Completions"
                                                    Foreground="{StaticResource ColorTextSecondary}"
                                                    FontSize="12" />
-                                        <TextBlock Text="{Binding StatTotalCompletions}"
+										<TextBlock Text="{Binding StatTotalCompletions}"
                                                    Foreground="{StaticResource ColorTextPrimary}"
                                                    FontSize="20"
                                                    FontWeight="Bold" />
-                                    </StackPanel>
-                                </Border>
+									</StackPanel>
+								</Border>
 
-                                <Border Grid.Row="1" Grid.Column="1"
+								<Border Grid.Row="1" Grid.Column="1"
                                         Background="{StaticResource ColorSurfaceAlt}"
                                         CornerRadius="{StaticResource RadiusSm}"
                                         Padding="12">
-                                    <StackPanel>
-                                        <TextBlock Text="Total XP"
+									<StackPanel>
+										<TextBlock Text="Total XP"
                                                    Foreground="{StaticResource ColorTextSecondary}"
                                                    FontSize="12" />
-                                        <TextBlock Text="{Binding StatTotalXp}"
+										<TextBlock Text="{Binding StatTotalXp}"
                                                    Foreground="{StaticResource ColorTextPrimary}"
                                                    FontSize="20"
                                                    FontWeight="Bold" />
-                                    </StackPanel>
-                                </Border>
-                            </Grid>
-                        </StackPanel>
-                    </Border>
+									</StackPanel>
+								</Border>
+							</Grid>
+						</StackPanel>
+					</Border>
 
-                    <Border Classes="card" Padding="24">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="📈 Level Progress"
+					<Border Classes="card" Padding="24">
+						<StackPanel Spacing="8">
+							<TextBlock Text="📈 Level Progress"
                                        FontSize="18"
                                        FontWeight="Bold"
                                        Foreground="{StaticResource ColorTextPrimary}" />
-                            <TextBlock FontSize="14"
+							<TextBlock FontSize="14"
                                        Foreground="{StaticResource ColorTextSecondary}">
-                                <Run Text="Level " />
-                                <Run Text="{Binding StatCurrentLevel}" FontWeight="Bold"
+								<Run Text="Level " />
+								<Run Text="{Binding StatCurrentLevel}" FontWeight="Bold"
                                      Foreground="{StaticResource ColorTextPrimary}" />
-                                <Run Text=" · " />
-                                <Run Text="{Binding StatLevelName}"
+								<Run Text=" · " />
+								<Run Text="{Binding StatLevelName}"
                                      Foreground="{StaticResource ColorTextPrimary}" />
-                            </TextBlock>
-                            <ProgressBar Minimum="0"
+							</TextBlock>
+							<ProgressBar Minimum="0"
                                          Maximum="{Binding StatXpForNext}"
                                          Value="{Binding StatXpProgress}"
                                          Height="10"
                                          Foreground="{StaticResource ColorAccent}"
                                          Background="{StaticResource ColorSurfaceAlt}" />
-                            <TextBlock FontSize="12"
+							<TextBlock FontSize="12"
                                        Foreground="{StaticResource ColorTextSecondary}">
-                                <Run Text="{Binding StatXpProgress}" />
-                                <Run Text=" / " />
-                                <Run Text="{Binding StatXpForNext}" />
-                                <Run Text=" XP" />
-                            </TextBlock>
-                        </StackPanel>
-                    </Border>
+								<Run Text="{Binding StatXpProgress}" />
+								<Run Text=" / " />
+								<Run Text="{Binding StatXpForNext}" />
+								<Run Text=" XP" />
+							</TextBlock>
+						</StackPanel>
+					</Border>
 
-                    <Border Classes="card" Padding="24">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="🔥 Best Streak"
+					<Border Classes="card" Padding="24">
+						<StackPanel Spacing="8">
+							<TextBlock Text="🔥 Best Streak"
                                        FontSize="18"
                                        FontWeight="Bold"
                                        Foreground="{StaticResource ColorTextPrimary}" />
-                            <TextBlock FontSize="14"
+							<TextBlock FontSize="14"
                                        Foreground="{StaticResource ColorTextSecondary}">
-                                <Run Text="{Binding StatBestStreakName}"
+								<Run Text="{Binding StatBestStreakName}"
                                      Foreground="{StaticResource ColorTextPrimary}"
                                      FontWeight="Bold" />
-                                <Run Text=" — " />
-                                <Run Text="{Binding StatBestStreakDays}"
+								<Run Text=" — " />
+								<Run Text="{Binding StatBestStreakDays}"
                                      Foreground="{StaticResource ColorTextPrimary}"
                                      FontWeight="Bold" />
-                                <Run Text=" days" />
-                            </TextBlock>
-                        </StackPanel>
-                    </Border>
+								<Run Text=" days" />
+							</TextBlock>
+						</StackPanel>
+					</Border>
 
-                </StackPanel>
-            </ScrollViewer>
-        </Grid>
+				</StackPanel>
+			</ScrollViewer>
+		</Grid>
 
-    </DockPanel>
+	</DockPanel>
 </Window>
 
 === ARQUIVO: ./HabitTracker.Desktop/Views/MainWindow.axaml.cs ===

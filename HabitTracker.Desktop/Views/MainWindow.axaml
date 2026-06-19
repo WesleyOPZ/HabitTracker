@@ -318,20 +318,38 @@
 
                                                             <Border BorderBrush="#2a2a30" BorderThickness="0,1,0,0"
                                                                     Margin="0,4" Padding="0,4,0,0">
-                                                                <Grid ColumnDefinitions="*, Auto, Auto"
+                                                                <Grid ColumnDefinitions="*, Auto, Auto, Auto, Auto"
                                                                       x:CompileBindings="False">
                                                                     <Button Grid.Column="0"
                                                                             Command="{Binding $parent[Window].DataContext.CompleteHabitCommand}"
                                                                             CommandParameter="{Binding}"
                                                                             Content="{Binding Converter={StaticResource HabitDoneLabelConverter}}"
                                                                             Background="{Binding Converter={StaticResource HabitStatusAccentConverter}}"
-                                                                            Foreground="White" FontSize="12" Padding="8,4" HorizontalAlignment="Left" CornerRadius="4"/>
+                                                                            Foreground="White" FontSize="12"
+                                                                            Padding="8,4" HorizontalAlignment="Left"
+                                                                            CornerRadius="4" />
                                                                     <Button Grid.Column="1"
+                                                                            Command="{Binding $parent[Window].DataContext.MoveHabitBackCommand}"
+                                                                            CommandParameter="{Binding}"
+                                                                            Content="◀" ToolTip.Tip="Move back"
+                                                                            Background="Transparent"
+                                                                            BorderThickness="0" Margin="4,0"
+                                                                            Padding="6,4" />
+                                                                    <Button Grid.Column="2"
+                                                                            Command="{Binding $parent[Window].DataContext.MoveHabitForwardCommand}"
+                                                                            CommandParameter="{Binding}"
+                                                                            Content="▶" ToolTip.Tip="Move forward"
+                                                                            Background="Transparent"
+                                                                            BorderThickness="0" Margin="4,0"
+                                                                            Padding="6,4" />
+                                                                    <Button Grid.Column="3"
                                                                             Command="{Binding $parent[Window].DataContext.OpenHabitHistoryCommand}"
                                                                             CommandParameter="{Binding}"
                                                                             Content="📅" ToolTip.Tip="History"
-                                                                            Background="Transparent" BorderThickness="0" Margin="4,0" Padding="6,4"/>
-                                                                    <Button Grid.Column="2"
+                                                                            Background="Transparent"
+                                                                            BorderThickness="0" Margin="4,0"
+                                                                            Padding="6,4" />
+                                                                    <Button Grid.Column="4"
                                                                             Command="{Binding $parent[Window].DataContext.DeleteHabitCommand}"
                                                                             CommandParameter="{Binding}"
                                                                             Content="🗑️" ToolTip.Tip="Delete"
