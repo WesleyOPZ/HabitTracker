@@ -22,9 +22,13 @@ public class HabitService {
         _folders = storageData.Folders;
 
         if (!_folders.Any()) {
-            _folders.Add(new HabitFolder { Id = (int)FolderType.ToDo, Name = "To Do", DisplayOrder = 0, CreatedAt = DateTime.UtcNow });
-            _folders.Add(new HabitFolder { Id = (int)FolderType.InProgress, Name = "In Progress", DisplayOrder = 1, CreatedAt = DateTime.UtcNow });
-            _folders.Add(new HabitFolder { Id = (int)FolderType.Done, Name = "Done", DisplayOrder = 2, CreatedAt = DateTime.UtcNow });
+            _folders.Add(new HabitFolder
+                { Id = (int)FolderType.ToDo, Name = "To Do", DisplayOrder = 0, CreatedAt = DateTime.UtcNow });
+            _folders.Add(new HabitFolder {
+                Id = (int)FolderType.InProgress, Name = "In Progress", DisplayOrder = 1, CreatedAt = DateTime.UtcNow
+            });
+            _folders.Add(new HabitFolder
+                { Id = (int)FolderType.Done, Name = "Done", DisplayOrder = 2, CreatedAt = DateTime.UtcNow });
 
 
             foreach (var habit in _habits) {
@@ -106,36 +110,75 @@ public class HabitService {
         };
     }
 
-    public void MoveHabitToFolder(int habitId, int targetFolderId) {
+    public MoveHabitResult MoveHabitToFolder(int habitId, int targetFolderId) {
         var habit = _habits.FirstOrDefault(h => h.Id == habitId);
-        if (habit == null || habit.FolderId == targetFolderId) return;
+        if (habit == null || habit.FolderId == targetFolderId) return new MoveHabitResult();
 
         int oldFolderId = habit.FolderId;
-
-        // --- ENTRANDO NO DONE ---
-        if (targetFolderId == (int)FolderType.Done && oldFolderId != (int)FolderType.Done) {
+        int xpBefore = _profile.TotalXp;
+        int levelBefore = LevelSystem.CalculateLevel(xpBefore);
+        // --- TO-DO → IN-PROGRESS ---
+        if (oldFolderId == (int)FolderType.ToDo && targetFolderId == (int)FolderType.InProgress) {
+            habit.IsInProgress = true;
+        }
+        // --- IN-PROGRESS → TO-DO ---
+        else if (oldFolderId == (int)FolderType.InProgress && targetFolderId == (int)FolderType.ToDo) {
+            habit.IsInProgress = false;
+        }
+        // --- QUALQUER → DONE ---
+        else if (targetFolderId == (int)FolderType.Done) {
             if (!habit.CompletedDates.Any(d => d.Date == DateTime.Today)) {
                 habit.CompletedDates.Add(DateTime.Now);
-                int xpToEarn = (int)habit.Difficulty + habit.CurrentStreak;
-                habit.XpGainedToday = xpToEarn;
-                habit.TotalXp += xpToEarn;
-                _profile.TotalXp += xpToEarn;
+
+                var yesterday = DateTime.Today.AddDays(-1);
+                if (habit.CompletedDates.Any(d => d.Date == yesterday))
+                    habit.CurrentStreak++;
+                else
+                    habit.CurrentStreak = 1;
+
+                if (habit.CurrentStreak > habit.LongestStreak)
+                    habit.LongestStreak = habit.CurrentStreak;
+
+                if (habit.LongestStreak > _profile.GlobalLongestStreak)
+                    _profile.GlobalLongestStreak = habit.LongestStreak;
+
+                int xpEarned = (int)habit.Difficulty + (habit.CurrentStreak - 1);
+                habit.XpGainedToday = xpEarned;
+                habit.TotalXp += xpEarned;
+                _profile.TotalXp += xpEarned;
             }
+
+            habit.IsInProgress = false;
         }
-        // --- SAINDO DO DONE ---
-        else if (oldFolderId == (int)FolderType.Done && targetFolderId != (int)FolderType.Done) {
+
+        // --- DONE → QUALQUER ---
+        else if (oldFolderId == (int)FolderType.Done) {
             var today = habit.CompletedDates.FirstOrDefault(d => d.Date == DateTime.Today);
             if (today != default) {
                 habit.CompletedDates.Remove(today);
                 _profile.TotalXp -= habit.XpGainedToday;
                 habit.TotalXp -= habit.XpGainedToday;
                 habit.XpGainedToday = 0;
+                habit.CurrentStreak = 0;
             }
+
+            habit.IsInProgress = targetFolderId == (int)FolderType.InProgress;
         }
 
         habit.FolderId = targetFolderId;
         SaveAllData();
         _storage.SaveProfile(_profile);
+
+        int levelAfter = LevelSystem.CalculateLevel(_profile.TotalXp);
+        var newAchievements = targetFolderId == (int)FolderType.Done
+            ? Achievements.CheckAchievements()
+            : new List<Achievement>();
+
+        return new MoveHabitResult {
+            LeveledUp = levelAfter > levelBefore,
+            NewLevel = levelAfter,
+            NewAchievements = newAchievements
+        };
     }
 
 
@@ -146,7 +189,8 @@ public class HabitService {
             return new CompleteHabitResult { Success = false, Message = "Habit not Found." };
 
         if (habit.IsCompletedToday())
-            return new CompleteHabitResult { AlreadyCompleted = true, Message = $"You already completed '{habit.Name}' today!" };
+            return new CompleteHabitResult
+                { AlreadyCompleted = true, Message = $"You already completed '{habit.Name}' today!" };
 
         habit.CompletedDates.Add(DateTime.Now);
 
@@ -195,6 +239,7 @@ public class HabitService {
             } else {
                 habit.CurrentStreak = 0;
             }
+
             habit.FolderId = (int)FolderType.ToDo;
             habit.XpGainedToday = 0;
         }

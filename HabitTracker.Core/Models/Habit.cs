@@ -14,6 +14,7 @@ public class Habit
     public List<DateTime> CompletedDates { get; set; } = new List<DateTime>();
     public int FolderId { get; set; }
     public int XpGainedToday {  get; set; }
+    public bool IsInProgress { get; set; }
     
     public bool IsCompletedToday()
     {

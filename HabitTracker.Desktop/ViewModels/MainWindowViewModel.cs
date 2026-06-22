@@ -94,31 +94,6 @@ public partial class MainWindowViewModel : ViewModelBase {
     }
 
     [RelayCommand]
-    private async Task CompleteHabit(Habit habit) {
-        var result = _habitService.CompleteHabit(habit.Id);
-        LoadHabits();
-
-        if (result.AlreadyCompleted) {
-            var box = MessageBoxManager.GetMessageBoxStandard(
-                "Already Done!",
-                $"'{habit.Name}' already completed today!",
-                ButtonEnum.Ok);
-            await box.ShowAsync();
-            return;
-        }
-
-        if (result.LeveledUp) {
-            var box = MessageBoxManager.GetMessageBoxStandard(
-                "🎉 Level Up!",
-                $"You reached Level {result.NewLevel} - {LevelSystem.GetLevelName(result.NewLevel)}!",
-                ButtonEnum.Ok);
-            await box.ShowAsync();
-        }
-
-        await ShowAchievementPopups(result.NewAchievements);
-    }
-
-    [RelayCommand]
     private async Task OpenCreateHabit() {
         var mainWindow = (Application.Current?.ApplicationLifetime
             as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
@@ -204,44 +179,49 @@ public partial class MainWindowViewModel : ViewModelBase {
     }
 
     [RelayCommand]
-    public void ChangeHabitStatus(MoveHabitArgs args) {
-        if (args == null) return;
-        var habit = args.Habit;
-        var targetFolderId = args.TargetFolderId;
-
-        if (habit.FolderId == targetFolderId) return;
-        
-
-        // 1. Atualiza o Service (Persistência e Regra de Negócio)
-        _habitService.MoveHabitToFolder(habit.Id, targetFolderId);
-
-        // 2. Atualiza a UI (Remover da coluna antiga, adicionar na nova)
-        var oldColumn = KanbanColumns.FirstOrDefault(c => c.Id != targetFolderId && c.Habits.Contains(habit));
-        var newColumn = KanbanColumns.FirstOrDefault(c => c.Id == targetFolderId);
+    public void MoveHabitInUi(MoveHabitArgs args) {
+        // Atualiza a UI (Remover da coluna antiga, adicionar na nova)
+        var oldColumn = KanbanColumns.FirstOrDefault(c => c.Id == args.Habit.FolderId);
+        var newColumn = KanbanColumns.FirstOrDefault(c => c.Id == args.TargetFolderId);
 
         if (oldColumn == null || newColumn == null) return;
 
-        oldColumn.Habits.Remove(habit);
-        newColumn.Habits.Add(habit);
-
-        // 3. Atualiza os status globais de XP e Nível
-        RefreshXpStats();
+        oldColumn.Habits.Remove(args.Habit);
+        newColumn.Habits.Add(args.Habit);
     }
 
     [RelayCommand]
-    public void MoveHabitForward(Habit habit) {
+    public async Task MoveHabitForward(Habit habit) {
         int next = habit.FolderId + 1;
         if (next > (int)FolderType.Done) return;
-        ChangeHabitStatus(new MoveHabitArgs(habit, next));
+
+        MoveHabitInUi(new MoveHabitArgs(habit, next));
+        var result = _habitService.MoveHabitToFolder(habit.Id, next);
+        RefreshXpStats();
+
+        if (result.LeveledUp) {
+            var box = MessageBoxManager.GetMessageBoxStandard(
+                "🎉 Level Up!",
+                $"You reached Level {result.NewLevel} - {LevelSystem.GetLevelName(result.NewLevel)}!",
+                ButtonEnum.Ok);
+            await box.ShowAsync();
+        }
+
+        await ShowAchievementPopups(result.NewAchievements);
     }
+
 
     [RelayCommand]
-    public void MoveHabitBack(Habit habit) {
+    public async Task MoveHabitBack(Habit habit) {
         int prev = habit.FolderId - 1;
         if (prev < (int)FolderType.ToDo) return;
-        ChangeHabitStatus(new MoveHabitArgs(habit, prev));
-    }
+        
+        MoveHabitInUi(new MoveHabitArgs(habit, prev));
+        var result = _habitService.MoveHabitToFolder(habit.Id, prev);
+        RefreshXpStats();
 
+        await ShowAchievementPopups(result.NewAchievements);
+    }
 
     public List<Category?> Categories { get; } = new() {
         null,
