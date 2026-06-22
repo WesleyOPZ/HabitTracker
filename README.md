@@ -47,89 +47,51 @@ A gamified habit tracking desktop application with a Kanban workflow, progressio
 - **Data Storage:** JSON (SQLite migration planned)
 
 ## 📁 Project Structure
+
+```
 HabitTracker/
-
 ├── HabitTracker.Core/
-
 │   ├── Models/
-
 │   │   ├── Habit.cs
-
 │   │   ├── HabitFolder.cs
-
 │   │   ├── FolderType.cs
-
 │   │   ├── Achievement.cs
-
 │   │   ├── AchievementType.cs
-
 │   │   ├── Category.cs
-
 │   │   ├── Difficulty.cs
-
 │   │   ├── Gender.cs
-
 │   │   ├── UserProfile.cs
-
 │   │   ├── StatisticsResult.cs
-
 │   │   ├── CreateHabitResult.cs
-
 │   │   ├── DeleteHabitResult.cs
-
 │   │   └── MoveHabitResult.cs
-
 │   ├── Services/
-
 │   │   ├── HabitService.cs
-
 │   │   ├── AchievementService.cs
-
 │   │   ├── StatisticsService.cs
-
 │   │   └── LevelSystem.cs
-
 │   └── Data/
-
 │       └── JsonStorage.cs
-
 │
-
 └── HabitTracker.Desktop/
-
-├── Converters/
-
-├── Models/
-
-│   ├── ActiveTab.cs
-
-│   └── SelectableAchievement.cs
-
-├── ViewModels/
-
-│   ├── MainWindowViewModel.cs
-
-│   ├── KanbanColumnViewModel.cs
-
-│   ├── CreateHabitViewModel.cs
-
-│   ├── EditProfileViewModel.cs
-
-│   └── ViewModelBase.cs
-
-├── Views/
-
-│   ├── MainWindow.axaml
-
-│   ├── CreateHabitDialog.axaml
-
-│   ├── HabitHistoryDialog.axaml
-
-│   └── EditProfileDialog.axaml
-
-├── App.axaml
-
-└── Program.cs
+    ├── Converters/
+    ├── Models/
+    │   ├── ActiveTab.cs
+    │   └── SelectableAchievement.cs
+    ├── ViewModels/
+    │   ├── MainWindowViewModel.cs
+    │   ├── KanbanColumnViewModel.cs
+    │   ├── CreateHabitViewModel.cs
+    │   ├── EditProfileViewModel.cs
+    │   └── ViewModelBase.cs
+    ├── Views/
+    │   ├── MainWindow.axaml
+    │   ├── CreateHabitDialog.axaml
+    │   ├── HabitHistoryDialog.axaml
+    │   └── EditProfileDialog.axaml
+    ├── App.axaml
+    └── Program.cs
+```
 
 ## 🚀 How to Run
 
