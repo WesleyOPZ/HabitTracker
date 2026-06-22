@@ -12,6 +12,7 @@
 *.sln.docstates
 *.dotsettings.user
 *.editorconfig
+*.idea/
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
