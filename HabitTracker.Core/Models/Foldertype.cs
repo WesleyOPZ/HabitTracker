@@ -1,4 +1,4 @@
-using HabitTracker.Core.Models;
+namespace HabitTracker.Core.Models;
 
 public enum FolderType {
     ToDo = 1,

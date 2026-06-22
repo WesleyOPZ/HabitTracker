@@ -142,10 +142,7 @@ public class HabitService {
                 if (habit.LongestStreak > _profile.GlobalLongestStreak)
                     _profile.GlobalLongestStreak = habit.LongestStreak;
 
-                int xpEarned = (int)habit.Difficulty + (habit.CurrentStreak - 1);
-                habit.XpGainedToday = xpEarned;
-                habit.TotalXp += xpEarned;
-                _profile.TotalXp += xpEarned;
+                ApplyHabitCompletion(habit);
             }
 
             habit.IsInProgress = false;
@@ -181,61 +178,18 @@ public class HabitService {
         };
     }
 
-
-    public CompleteHabitResult CompleteHabit(int id) {
-        var habit = _habits.FirstOrDefault(h => h.Id == id);
-
-        if (habit == null)
-            return new CompleteHabitResult { Success = false, Message = "Habit not Found." };
-
-        if (habit.IsCompletedToday())
-            return new CompleteHabitResult
-                { AlreadyCompleted = true, Message = $"You already completed '{habit.Name}' today!" };
-
-        habit.CompletedDates.Add(DateTime.Now);
-
-        var yesterday = DateTime.Today.AddDays(-1);
-        if (habit.CompletedDates.Any(d => d.Date == yesterday))
-            habit.CurrentStreak++;
-        else
-            habit.CurrentStreak = 1;
-
-        if (habit.CurrentStreak > habit.LongestStreak)
-            habit.LongestStreak = habit.CurrentStreak;
-
-        if (habit.LongestStreak > _profile.GlobalLongestStreak)
-            _profile.GlobalLongestStreak = habit.LongestStreak;
-
-        int xpEarned = (int)habit.Difficulty + (habit.CurrentStreak - 1);
-        habit.TotalXp += xpEarned;
-        _profile.TotalXp += xpEarned;
-
-        SaveAllData();
-        _storage.SaveProfile(_profile);
-
-        int totalXp = _profile.TotalXp;
-        int oldLevel = LevelSystem.CalculateLevel(totalXp - xpEarned);
-        int newLevel = LevelSystem.CalculateLevel(totalXp);
-
-        var newAchievements = Achievements.CheckAchievements();
-
-        return new CompleteHabitResult {
-            Success = true,
-            XpEarned = xpEarned,
-            LeveledUp = newLevel > oldLevel,
-            NewLevel = newLevel,
-            NewAchievements = newAchievements
-        };
-    }
-
     public bool ProcessDailyReset() {
         if (_profile.LastResetDate.Date >= DateTime.Today) return false;
 
         foreach (var habit in _habits) {
             if (habit.FolderId == (int)FolderType.Done) {
-                habit.CurrentStreak++;
                 if (habit.CurrentStreak > habit.LongestStreak)
                     habit.LongestStreak = habit.CurrentStreak;
+            } else if (habit.IsInProgress) {
+                habit.CompletedDates.Add(DateTime.Now);
+                ApplyHabitCompletion(habit, halfXp: true);
+                habit.CurrentStreak = 0;
+                habit.IsInProgress = false;
             } else {
                 habit.CurrentStreak = 0;
             }
@@ -267,16 +221,19 @@ public class HabitService {
         return _habits.OrderByDescending(h => h.CurrentStreak).ToList();
     }
 
-    public List<Habit> GetHabitsByFolder(int folderId) {
-        return _habits.Where(h => h.FolderId == folderId).OrderByDescending(h => h.CurrentStreak).ToList();
-    }
-
-    public int GetTotalXp() {
-        return _profile.TotalXp;
-    }
-
     public void UpdateProfile(UserProfile profile) {
         _profile = profile;
         _storage.SaveProfile(_profile);
+    }
+
+    private void ApplyHabitCompletion(Habit habit, bool halfXp = false) {
+
+        int xpEarned = (int)habit.Difficulty + (habit.CurrentStreak - 1);
+        if (halfXp)
+            xpEarned = ((int)habit.Difficulty + habit.CurrentStreak) / 2;
+
+        habit.XpGainedToday = xpEarned;
+        habit.TotalXp += xpEarned;
+        _profile.TotalXp += xpEarned;
     }
 }
