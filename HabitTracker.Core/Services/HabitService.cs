@@ -156,7 +156,7 @@ public class HabitService {
                 _profile.TotalXp -= habit.XpGainedToday;
                 habit.TotalXp -= habit.XpGainedToday;
                 habit.XpGainedToday = 0;
-                habit.CurrentStreak = 0;
+                habit.CurrentStreak = Math.Max(0, habit.CurrentStreak - 1);
             }
 
             habit.IsInProgress = targetFolderId == (int)FolderType.InProgress;
@@ -185,19 +185,21 @@ public class HabitService {
             if (habit.FolderId == (int)FolderType.Done) {
                 if (habit.CurrentStreak > habit.LongestStreak)
                     habit.LongestStreak = habit.CurrentStreak;
-            } else if (habit.IsInProgress) {
-                habit.CompletedDates.Add(DateTime.Now);
-                ApplyHabitCompletion(habit, halfXp: true);
-                habit.CurrentStreak = 0;
-                habit.IsInProgress = false;
+
+                if (habit.LongestStreak > _profile.GlobalLongestStreak)
+                    _profile.GlobalLongestStreak = habit.LongestStreak;
             } else {
+                if (habit.IsInProgress) {
+                    ApplyHabitCompletion(habit, halfXp: true);
+                }
+
                 habit.CurrentStreak = 0;
             }
-
+            
             habit.FolderId = (int)FolderType.ToDo;
+            habit.IsInProgress = false;
             habit.XpGainedToday = 0;
         }
-
         _profile.LastResetDate = DateTime.Today;
         SaveAllData();
         _storage.SaveProfile(_profile);
@@ -227,8 +229,7 @@ public class HabitService {
     }
 
     private void ApplyHabitCompletion(Habit habit, bool halfXp = false) {
-
-        int xpEarned = (int)habit.Difficulty + (habit.CurrentStreak - 1);
+        int xpEarned = (int)habit.Difficulty + Math.Max(0, habit.CurrentStreak - 1);
         if (halfXp)
             xpEarned = ((int)habit.Difficulty + habit.CurrentStreak) / 2;
 

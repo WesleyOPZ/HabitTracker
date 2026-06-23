@@ -179,7 +179,7 @@ public partial class MainWindowViewModel : ViewModelBase {
     }
 
     [RelayCommand]
-    public void MoveHabitInUi(MoveHabitArgs args) {
+    private void MoveHabitInUi(MoveHabitArgs args) {
         // Atualiza a UI (Remover da coluna antiga, adicionar na nova)
         var oldColumn = KanbanColumns.FirstOrDefault(c => c.Id == args.Habit.FolderId);
         var newColumn = KanbanColumns.FirstOrDefault(c => c.Id == args.TargetFolderId);
@@ -195,8 +195,8 @@ public partial class MainWindowViewModel : ViewModelBase {
         int next = habit.FolderId + 1;
         if (next > (int)FolderType.Done) return;
 
-        MoveHabitInUi(new MoveHabitArgs(habit, next));
         var result = _habitService.MoveHabitToFolder(habit.Id, next);
+        MoveHabitInUi(new MoveHabitArgs(habit, next));
         RefreshXpStats();
 
         if (result.LeveledUp) {
@@ -216,8 +216,8 @@ public partial class MainWindowViewModel : ViewModelBase {
         int prev = habit.FolderId - 1;
         if (prev < (int)FolderType.ToDo) return;
         
-        MoveHabitInUi(new MoveHabitArgs(habit, prev));
         var result = _habitService.MoveHabitToFolder(habit.Id, prev);
+        MoveHabitInUi(new MoveHabitArgs(habit, prev));
         RefreshXpStats();
 
         await ShowAchievementPopups(result.NewAchievements);
