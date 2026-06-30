@@ -15,8 +15,11 @@ public class HabitService {
     public AchievementService Achievements { get; private set; }
     public UserProfile GetProfile() => _profile;
 
-    public HabitService() {
-        _storage = new JsonStorage();
+    
+    public HabitService() : this(new JsonStorage()) { }
+
+    public HabitService(JsonStorage storage) {
+        _storage = storage;
         var storageData = _storage.LoadHabits();
         _habits = storageData.Habits;
         _folders = storageData.Folders;
