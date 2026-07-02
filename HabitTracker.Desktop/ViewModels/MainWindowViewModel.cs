@@ -50,7 +50,7 @@ public partial class MainWindowViewModel : ViewModelBase {
 
     private List<Habit> _allHabits = new();
 
-    public record MoveHabitArgs(Habit Habit, int TargetFolderId);
+    public record MoveHabitArgs(Habit Habit, int OldFolderId,int TargetFolderId);
 
     public MainWindowViewModel() {
         if (Design.IsDesignMode) {
@@ -181,7 +181,7 @@ public partial class MainWindowViewModel : ViewModelBase {
     [RelayCommand]
     private void MoveHabitInUi(MoveHabitArgs args) {
         // Atualiza a UI (Remover da coluna antiga, adicionar na nova)
-        var oldColumn = KanbanColumns.FirstOrDefault(c => c.Id == args.Habit.FolderId);
+        var oldColumn = KanbanColumns.FirstOrDefault(c => c.Id == args.OldFolderId);  // <- usa o valor congelado
         var newColumn = KanbanColumns.FirstOrDefault(c => c.Id == args.TargetFolderId);
 
         if (oldColumn == null || newColumn == null) return;
@@ -195,8 +195,9 @@ public partial class MainWindowViewModel : ViewModelBase {
         int next = habit.FolderId + 1;
         if (next > (int)FolderType.Done) return;
 
+        int oldFolderId = habit.FolderId;          
         var result = _habitService.MoveHabitToFolder(habit.Id, next);
-        MoveHabitInUi(new MoveHabitArgs(habit, next));
+        MoveHabitInUi(new MoveHabitArgs(habit, oldFolderId, next));
         RefreshXpStats();
 
         if (result.LeveledUp) {
@@ -216,8 +217,9 @@ public partial class MainWindowViewModel : ViewModelBase {
         int prev = habit.FolderId - 1;
         if (prev < (int)FolderType.ToDo) return;
         
+        int oldFolderId = habit.FolderId;          
         var result = _habitService.MoveHabitToFolder(habit.Id, prev);
-        MoveHabitInUi(new MoveHabitArgs(habit, prev));
+        MoveHabitInUi(new MoveHabitArgs(habit, oldFolderId, prev));
         RefreshXpStats();
 
         await ShowAchievementPopups(result.NewAchievements);

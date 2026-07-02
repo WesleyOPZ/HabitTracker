@@ -1,0 +1,88 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Style Selector="Button.winbtn">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="{StaticResource ColorTextSecondary}" />
+        <Setter Property="Width" Value="46" />
+        <Setter Property="Height" Value="40" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="FontSize" Value="14" />
+    </Style>
+    <Style Selector="Button.winbtn:pointerover">
+        <Setter Property="Background" Value="#14FFFFFF" />
+        <Setter Property="Foreground" Value="{StaticResource ColorTextPrimary}" />
+    </Style>
+    <Style Selector="Button.winbtn.close:pointerover">
+        <Setter Property="Background" Value="{StaticResource ColorDanger}" />
+        <Setter Property="Foreground" Value="White" />
+    </Style>
+
+    <Style Selector="Button.nav">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{StaticResource ColorTextSecondary}" />
+        <Setter Property="Padding" Value="12,8" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.nav:pointerover">
+        <Setter Property="Background" Value="#0DFFFFFF" />
+        <Setter Property="Foreground" Value="{StaticResource ColorTextPrimary}" />
+    </Style>
+
+    <Style Selector="Button.primary">
+        <Setter Property="Background" Value="{StaticResource ColorAccent}" />
+        <Setter Property="Foreground" Value="#ffffff" />
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusSm}" />
+        <Setter Property="Padding" Value="12,8" />
+        <Setter Property="BorderBrush" Value="{StaticResource ColorAccent}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+    <Style Selector="Button.primary:pointerover">
+        <Setter Property="Background" Value="{StaticResource ColorAccentHover}" />
+    </Style>
+
+    <Style Selector="Button.secondary">
+        <Setter Property="Background" Value="#0DFFFFFF" />
+        <Setter Property="Foreground" Value="{StaticResource ColorTextSecondary}" />
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusSm}" />
+        <Setter Property="Padding" Value="10,8" />
+        <Setter Property="BorderBrush" Value="{StaticResource ColorBorder}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Button.secondary:pointerover">
+        <Setter Property="Background" Value="#14FFFFFF" />
+        <Setter Property="Foreground" Value="{StaticResource ColorTextPrimary}" />
+    </Style>
+
+    <Style Selector="Button.danger">
+        <Setter Property="Background" Value="{StaticResource ColorDanger}" />
+        <Setter Property="Foreground" Value="{StaticResource ColorTextPrimary}" />
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusSm}" />
+        <Setter Property="Padding" Value="12,8" />
+        <Setter Property="BorderBrush" Value="{StaticResource ColorDanger}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Button.danger:pointerover">
+        <Setter Property="Background" Value="#c45864" />
+    </Style>
+
+    <Style Selector="Border.card">
+        <Setter Property="Background" Value="{StaticResource ColorSurface}" />
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusLg}" />
+        <Setter Property="BorderBrush" Value="{StaticResource ColorBorder}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <Style Selector="TextBlock.title">
+        <Setter Property="Foreground" Value="{StaticResource ColorTextPrimary}" />
+        <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+    <Style Selector="TextBlock.subtle">
+        <Setter Property="Foreground" Value="{StaticResource ColorTextSecondary}" />
+    </Style>
+</Styles>

@@ -3,13 +3,22 @@
              x:Class="HabitTracker.Desktop.App"
              xmlns:local="using:HabitTracker.Desktop"
              RequestedThemeVariant="Default">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+    <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
     <Application.DataTemplates>
-        <local:ViewLocator/>
+        <local:ViewLocator />
     </Application.DataTemplates>
-  
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://HabitTracker.Desktop/Styles/Colors.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
     <Application.Styles>
         <FluentTheme />
+        <StyleInclude Source="avares://HabitTracker.Desktop/Styles/Controls.axaml" />
     </Application.Styles>
 </Application>
