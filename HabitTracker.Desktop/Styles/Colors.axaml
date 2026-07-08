@@ -25,6 +25,9 @@
     <SolidColorBrush x:Key="DifficultyHard">#ef4444</SolidColorBrush>
     <SolidColorBrush x:Key="DifficultyLegendary">#f59e0b</SolidColorBrush>
 
+    <SolidColorBrush x:Key="ColorStreak">#f97316</SolidColorBrush>
+
+
     <BoxShadows x:Key="LegendaryGlow">0 0 15 2 #40f59e0b</BoxShadows>
 
     <CornerRadius x:Key="RadiusSm">6</CornerRadius>

@@ -32,6 +32,8 @@
         <converters:TabActiveForegroundConverter x:Key="TabActiveForegroundConverter" />
         <converters:DifficultyColorConverter x:Key="DifficultyColorConverter" />
         <converters:DifficultyBgConverter x:Key="DifficultyBgConverter" />
+        <converters:DifficultyTextGlowConverter x:Key="DifficultyTextGlowConverter" />
+        <converters:DifficultyToGlowConverter x:Key="DifficultyToGlowConverter" />
         <converters:XpRatioToWidthConverter x:Key="XpRatioToWidthConverter" />
     </Window.Resources>
 
@@ -83,7 +85,7 @@
                     BorderBrush="{StaticResource ColorBorder}"
                     BorderThickness="0,0,1,0">
 
-                <Grid RowDefinitions="Auto, *, Auto" Margin="0,16">
+                <Grid RowDefinitions="Auto, *, Auto, Auto" Margin="0,16">
 
                     <!-- TOPO: AVATAR BOTÃO + BARRA XP CUSTOM -->
                     <StackPanel Grid.Row="0" Spacing="8" HorizontalAlignment="Center" Margin="0,0,0,16">
@@ -116,11 +118,22 @@
                                 Height="4"
                                 CornerRadius="2"
                                 ClipToBounds="True"
-                                Background="{StaticResource ColorSurface}"
-                                ToolTip.Tip="{Binding CurrentXp, StringFormat='XP: \{0\}'}">
+                                Background="{StaticResource ColorSurface}">
+
+                                <ToolTip.Tip>
+                                    <StackPanel Orientation="Horizontal" Spacing="4" Margin="4">
+                                        <TextBlock Text="Level Progress: " FontWeight="SemiBold" Foreground="{StaticResource ColorTextPrimary}"/>
+                                        <TextBlock Text="{Binding XpInCurrentLevel}" Foreground="{StaticResource ColorTextPrimary}"/>
+                                        <TextBlock Text=" / " Foreground="{StaticResource ColorTextMuted}"/>
+                                        <TextBlock Text="{Binding XpForNextLevel}" Foreground="{StaticResource ColorTextPrimary}"/>
+                                        <TextBlock Text=" XP " Foreground="{StaticResource ColorAccent}" FontWeight="Bold"/>
+                                    </StackPanel>
+                                </ToolTip.Tip>
+
                             <Border HorizontalAlignment="Left"
                                     CornerRadius="2"
                                     Background="{StaticResource ColorAccent}">
+
                                 <Border.Width>
                                     <MultiBinding Converter="{StaticResource XpRatioToWidthConverter}">
                                         <Binding Path="XpInCurrentLevel" />
@@ -164,16 +177,40 @@
                                 ToolTip.Tip="Conquistas">
                             <TextBlock Text="🏆" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Button>
-
                     </StackPanel>
 
                     <!-- RODAPÉ -->
-                    <TextBlock Grid.Row="2"
-                               Text="v1.0"
-                               FontSize="9"
-                               Foreground="{StaticResource ColorTextSecondary}"
-                               HorizontalAlignment="Center"
-                               Opacity="0.4" />
+                    <!-- Settings -->
+                    <StackPanel Grid.Row="2" Spacing="8" VerticalAlignment="Bottom">
+                        <Button HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                VerticalContentAlignment="Center"
+                                Height="40"
+                                Padding="0"
+                                Margin="0,0,0,4"
+                                CornerRadius="6"
+                                Background="{Binding ActiveTab, Converter={StaticResource TabActiveBackgroundConverter}, ConverterParameter=Settings}"
+                                Foreground="{Binding ActiveTab, Converter={StaticResource TabActiveForegroundConverter}, ConverterParameter=Settings}"
+                                Command="{Binding ShowTabCommand}"
+                                CommandParameter="{x:Static desktopModels:ActiveTab.Settings}"
+                                ToolTip.Tip="Settings">
+
+                            <Button.Styles>
+                                <Style Selector="Button:pointerover">
+                                    <Setter Property="Background" Value="{StaticResource ColorSurface}"/>
+                                </Style>
+                        </Button.Styles>
+
+                            <TextBlock Text="⚙️" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Button>
+
+                        <TextBlock
+                                   Text="{Binding AppVersion}"
+                                   FontSize="9"
+                                   Foreground="{StaticResource ColorTextSecondary}"
+                                   HorizontalAlignment="Center"
+                                   Opacity="0.4" />
+                    </StackPanel>
                 </Grid>
             </Border>
 
@@ -260,7 +297,9 @@
                                                                 CornerRadius="8"
                                                                 Background="{StaticResource ColorCard}"
                                                                 BorderThickness="1"
-                                                                BorderBrush="{StaticResource ColorBorder}">
+                                                                BorderBrush="{StaticResource ColorBorder}"
+                                                                BoxShadow="0 4 10 0 #A0000000">
+
 
                                                             <!-- Menu de contexto (botão direito no card) para abrir Histórico e Excluir hábito -->
                                                             <Border.ContextMenu>
@@ -277,9 +316,27 @@
                                                                               Foreground="#FF4A4A" />
                                                                 </ContextMenu>
                                                             </Border.ContextMenu>
+                                                            <!-- Injeção dinâmica do BoxShadow apenas se for Lendário via Style Triggers -->
 
-                                                            <!-- Definição de Estilos Avançados para o Card -->
                                                             <Border.Styles>
+                                                                <Style Selector="Border.card">
+                                                                    <Setter Property="Transitions">
+                                                                        <Transitions>
+                                                                            <TransformOperationsTransition
+                                                                                Property="RenderTransform"
+                                                                                Duration="0:0:0.15" />
+                                                                        </Transitions>
+                                                                    </Setter>
+                                                                </Style>
+
+                                                                <Style Selector="Border.card:pointerover">
+                                                                    <Setter Property="BoxShadow"
+                                                                            Value="0 6 16 2 #C0000000" />
+                                                                    <Setter Property="RenderTransform"
+                                                                            Value="translateY(-0.8px)" />
+                                                                </Style>
+
+
                                                                 <Style Selector="Button#BtnMoveBack">
                                                                     <Setter Property="Opacity" Value="0.0" />
                                                                     <Setter Property="Transitions">
@@ -289,6 +346,7 @@
                                                                         </Transitions>
                                                                     </Setter>
                                                                 </Style>
+
                                                                 <Style
                                                                     Selector="Border#LeftZone:pointerover Button#BtnMoveBack">
                                                                     <Setter Property="Opacity" Value="1.0" />
@@ -303,6 +361,7 @@
                                                                         </Transitions>
                                                                     </Setter>
                                                                 </Style>
+
                                                                 <Style
                                                                     Selector="Border#RightZone:pointerover Button#BtnMoveForward">
                                                                     <Setter Property="Opacity" Value="1.0" />
@@ -320,20 +379,22 @@
                                                                                 TextWrapping="Wrap" MaxWidth="180" />
                                                                         <Border
                                                                             Background="{Binding Difficulty, Converter={StaticResource DifficultyBgConverter}}"
-                                                                            CornerRadius="4" Padding="6,2"
+                                                                            CornerRadius="4"
+                                                                            Padding="6,2"
                                                                             HorizontalAlignment="Right"
-                                                                            VerticalAlignment="Top">
+                                                                            VerticalAlignment="Top"
+                                                                            BoxShadow="{Binding Difficulty, Converter={StaticResource DifficultyToGlowConverter}}">
                                                                             <TextBlock Text="{Binding Difficulty}"
                                                                                     FontSize="10" FontWeight="Bold"
                                                                                     Foreground="{Binding Difficulty, Converter={StaticResource DifficultyColorConverter}}" />
                                                                         </Border>
                                                                     </DockPanel>
 
-                                                                    <TextBlock Text="{Binding Description}"
-                                                                               FontSize="12"
-                                                                               Foreground="{StaticResource ColorTextSecondary}"
-                                                                               TextWrapping="Wrap" Margin="0,2,0,4"
-                                                                               IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                                                        <TextBlock Text="{Binding Description}"
+                                                                                FontSize="12"
+                                                                                Foreground="{StaticResource ColorTextSecondary}"
+                                                                                TextWrapping="Wrap" Margin="0,2,0,4"
+                                                                                IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
                                                                     <WrapPanel Orientation="Horizontal" Margin="0,2">
                                                                         <Border
@@ -361,9 +422,9 @@
                                                                         <TextBlock Text="{Binding CurrentStreak}"
                                                                                 FontSize="12"
                                                                                 FontWeight="Bold"
-                                                                                Foreground="{StaticResource ColorTextPrimary}" />
+                                                                                Foreground="{StaticResource ColorStreak}" />
                                                                         <TextBlock Text="streak days" FontSize="11"
-                                                                                Foreground="{StaticResource ColortextSeconday}"
+                                                                                Foreground="{StaticResource ColorStreak}"
                                                                                 VerticalAlignment="Center" />
                                                                     </StackPanel>
 
@@ -451,6 +512,8 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
+
+
 
                 <!-- ABA: PROFILE (UNIFICADA COM DETALHES DE PERFORMANCE/ESTATÍSTICAS) -->
                 <ScrollViewer
@@ -549,6 +612,17 @@
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
+
+                <!-- ABA: Settings -->
+                <Grid IsVisible="{Binding ActiveTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=Settings}">
+                    <TextBlock Text="Settings"
+                               Foreground="{StaticResource ColorTextSecondary}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               FontSize="15"
+                               FontStyle="Italic"
+                               Opacity="0.5"/>
+                </Grid>
 
             </Grid>
         </Grid>

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -18,24 +19,46 @@ using HabitTracker.Desktop.Models;
 namespace HabitTracker.Desktop.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase {
+
+    // ===== Campos privados =====
     private readonly HabitService _habitService;
+    private List<Habit> _allHabits = new();
 
+    // ===== Propriedades públicas (não observáveis) =====
     public ObservableCollection<KanbanColumnViewModel> KanbanColumns { get; } = new();
+    public ObservableCollection<Achievement> Achievements { get; } = new();
+    public string AppVersion { get; } = GetAppVersion();
 
+    public List<Category?> Categories { get; } = new() {
+        null,
+        Category.Health,
+        Category.Study,
+        Category.Work,
+        Category.Personal
+    };
 
+    public record MoveHabitArgs(Habit Habit, int OldFolderId, int TargetFolderId);
+
+    // ===== Estado de navegação / filtro =====
+    [ObservableProperty] private ActiveTab _activeTab = ActiveTab.Habits;
+    [ObservableProperty] private Category? _selectedCategory;
+
+    // ===== Nível / XP (topo do sidebar) =====
     [ObservableProperty] private int _level;
     [ObservableProperty] private string _levelName = string.Empty;
     [ObservableProperty] private int _currentXp;
     [ObservableProperty] private int _xpInCurrentLevel;
     [ObservableProperty] private int _xpForNextLevel;
-    [ObservableProperty] private Category? _selectedCategory;
-    [ObservableProperty] private ActiveTab _activeTab = ActiveTab.Habits;
+
+    // ===== Perfil =====
     [ObservableProperty] private string _profileUserName = string.Empty;
     [ObservableProperty] private string _profileDescription = string.Empty;
     [ObservableProperty] private string _profileGender = string.Empty;
     [ObservableProperty] private string _profileDateOfBirth = string.Empty;
     [ObservableProperty] private string _profileMemberSince = string.Empty;
     [ObservableProperty] private int _globalLongestStreak;
+
+    // ===== Estatísticas =====
     [ObservableProperty] private int _statTotalHabits;
     [ObservableProperty] private int _statCompletedToday;
     [ObservableProperty] private int _statTotalXp;
@@ -46,12 +69,8 @@ public partial class MainWindowViewModel : ViewModelBase {
     [ObservableProperty] private int _statTotalCompletions;
     [ObservableProperty] private string _statBestStreakName = "No habits yet";
     [ObservableProperty] private int _statBestStreakDays;
-    public ObservableCollection<Achievement> Achievements { get; } = new();
 
-    private List<Habit> _allHabits = new();
-
-    public record MoveHabitArgs(Habit Habit, int OldFolderId,int TargetFolderId);
-
+    // ===== Construtor =====
     public MainWindowViewModel() {
         if (Design.IsDesignMode) {
             _habitService = null!;
@@ -68,31 +87,7 @@ public partial class MainWindowViewModel : ViewModelBase {
         LoadHabits();
     }
 
-    private void LoadHabits() {
-        _allHabits = _habitService.GetHabits();
-
-        if (KanbanColumns.Count == 0) {
-            KanbanColumns.Add(new KanbanColumnViewModel((int)FolderType.ToDo, "To-Do"));
-            KanbanColumns.Add(new KanbanColumnViewModel((int)FolderType.InProgress, "In-Progress"));
-            KanbanColumns.Add(new KanbanColumnViewModel((int)FolderType.Done, "Done"));
-        }
-
-        ApplyFilter();
-
-        int totalXp = _habitService.GetProfile().TotalXp;
-        Level = LevelSystem.CalculateLevel(totalXp);
-        LevelName = LevelSystem.GetLevelName(Level);
-        CurrentXp = totalXp;
-        XpInCurrentLevel = LevelSystem.GetXpProgressInCurrentLevel(totalXp, Level);
-        XpForNextLevel = LevelSystem.GetXpForNextLevel(Level);
-        Achievements.Clear();
-        foreach (var achievement in _habitService.Achievements.GetAllAchievements())
-            Achievements.Add(achievement);
-
-        LoadProfile();
-        LoadStatistics();
-    }
-
+    // ===== Commands: CRUD de hábitos =====
     [RelayCommand]
     private async Task OpenCreateHabit() {
         var mainWindow = (Application.Current?.ApplicationLifetime
@@ -141,18 +136,54 @@ public partial class MainWindowViewModel : ViewModelBase {
         await dialog.ShowDialog(mainWindow);
     }
 
+    // ===== Commands: Kanban (mover hábito entre colunas) =====
     [RelayCommand]
-    private void ShowTab(ActiveTab tab) => ActiveTab = tab;
+    private void MoveHabitInUi(MoveHabitArgs args) {
+        // Atualiza a UI (Remover da coluna antiga, adicionar na nova)
+        var oldColumn = KanbanColumns.FirstOrDefault(c => c.Id == args.OldFolderId); // <- usa o valor congelado
+        var newColumn = KanbanColumns.FirstOrDefault(c => c.Id == args.TargetFolderId);
 
-    private async Task ShowAchievementPopups(List<Achievement> achievements) {
-        foreach (var achievement in achievements) {
-            var box = MessageBoxManager.GetMessageBoxStandard("🏆 Achievement Unlocked!",
-                $"{achievement.Icon} {achievement.Name}\n{achievement.Description}",
+        if (oldColumn == null || newColumn == null) return;
+
+        oldColumn.Habits.Remove(args.Habit);
+        newColumn.Habits.Add(args.Habit);
+    }
+
+    [RelayCommand]
+    public async Task MoveHabitForward(Habit habit) {
+        int next = habit.FolderId + 1;
+        if (next > (int)FolderType.Done) return;
+
+        int oldFolderId = habit.FolderId;
+        var result = _habitService.MoveHabitToFolder(habit.Id, next);
+        MoveHabitInUi(new MoveHabitArgs(habit, oldFolderId, next));
+        RefreshXpStats();
+
+        if (result.LeveledUp) {
+            var box = MessageBoxManager.GetMessageBoxStandard(
+                "🎉 Level Up!",
+                $"You reached Level {result.NewLevel} - {LevelSystem.GetLevelName(result.NewLevel)}!",
                 ButtonEnum.Ok);
             await box.ShowAsync();
         }
+
+        await ShowAchievementPopups(result.NewAchievements);
     }
 
+    [RelayCommand]
+    public async Task MoveHabitBack(Habit habit) {
+        int prev = habit.FolderId - 1;
+        if (prev < (int)FolderType.ToDo) return;
+
+        int oldFolderId = habit.FolderId;
+        var result = _habitService.MoveHabitToFolder(habit.Id, prev);
+        MoveHabitInUi(new MoveHabitArgs(habit, oldFolderId, prev));
+        RefreshXpStats();
+
+        await ShowAchievementPopups(result.NewAchievements);
+    }
+
+    // ===== Commands: Perfil / Navegação =====
     [RelayCommand]
     private async Task OpenEditProfile() {
         var mainWindow = (Application.Current?.ApplicationLifetime
@@ -179,59 +210,38 @@ public partial class MainWindowViewModel : ViewModelBase {
     }
 
     [RelayCommand]
-    private void MoveHabitInUi(MoveHabitArgs args) {
-        // Atualiza a UI (Remover da coluna antiga, adicionar na nova)
-        var oldColumn = KanbanColumns.FirstOrDefault(c => c.Id == args.OldFolderId);  // <- usa o valor congelado
-        var newColumn = KanbanColumns.FirstOrDefault(c => c.Id == args.TargetFolderId);
+    private void ShowTab(ActiveTab tab) => ActiveTab = tab;
 
-        if (oldColumn == null || newColumn == null) return;
-
-        oldColumn.Habits.Remove(args.Habit);
-        newColumn.Habits.Add(args.Habit);
+    // ===== Partial change handlers =====
+    partial void OnSelectedCategoryChanged(Category? value) {
+        ApplyFilter();
     }
 
-    [RelayCommand]
-    public async Task MoveHabitForward(Habit habit) {
-        int next = habit.FolderId + 1;
-        if (next > (int)FolderType.Done) return;
+    // ===== Helpers privados: carregamento/atualização de estado =====
+    private void LoadHabits() {
+        _allHabits = _habitService.GetHabits();
 
-        int oldFolderId = habit.FolderId;          
-        var result = _habitService.MoveHabitToFolder(habit.Id, next);
-        MoveHabitInUi(new MoveHabitArgs(habit, oldFolderId, next));
-        RefreshXpStats();
-
-        if (result.LeveledUp) {
-            var box = MessageBoxManager.GetMessageBoxStandard(
-                "🎉 Level Up!",
-                $"You reached Level {result.NewLevel} - {LevelSystem.GetLevelName(result.NewLevel)}!",
-                ButtonEnum.Ok);
-            await box.ShowAsync();
+        if (KanbanColumns.Count == 0) {
+            KanbanColumns.Add(new KanbanColumnViewModel((int)FolderType.ToDo, "To-Do"));
+            KanbanColumns.Add(new KanbanColumnViewModel((int)FolderType.InProgress, "In-Progress"));
+            KanbanColumns.Add(new KanbanColumnViewModel((int)FolderType.Done, "Done"));
         }
 
-        await ShowAchievementPopups(result.NewAchievements);
+        ApplyFilter();
+
+        int totalXp = _habitService.GetProfile().TotalXp;
+        Level = LevelSystem.CalculateLevel(totalXp);
+        LevelName = LevelSystem.GetLevelName(Level);
+        CurrentXp = totalXp;
+        XpInCurrentLevel = LevelSystem.GetXpProgressInCurrentLevel(totalXp, Level);
+        XpForNextLevel = LevelSystem.GetXpForNextLevel(Level);
+        Achievements.Clear();
+        foreach (var achievement in _habitService.Achievements.GetAllAchievements())
+            Achievements.Add(achievement);
+
+        LoadProfile();
+        LoadStatistics();
     }
-
-
-    [RelayCommand]
-    public async Task MoveHabitBack(Habit habit) {
-        int prev = habit.FolderId - 1;
-        if (prev < (int)FolderType.ToDo) return;
-        
-        int oldFolderId = habit.FolderId;          
-        var result = _habitService.MoveHabitToFolder(habit.Id, prev);
-        MoveHabitInUi(new MoveHabitArgs(habit, oldFolderId, prev));
-        RefreshXpStats();
-
-        await ShowAchievementPopups(result.NewAchievements);
-    }
-
-    public List<Category?> Categories { get; } = new() {
-        null,
-        Category.Health,
-        Category.Study,
-        Category.Work,
-        Category.Personal
-    };
 
     private void ApplyFilter() {
         foreach (var column in KanbanColumns) {
@@ -250,10 +260,6 @@ public partial class MainWindowViewModel : ViewModelBase {
                 targetColumn.Habits.Add(habit);
             }
         }
-    }
-
-    partial void OnSelectedCategoryChanged(Category? value) {
-        ApplyFilter();
     }
 
     private void LoadProfile() {
@@ -291,5 +297,26 @@ public partial class MainWindowViewModel : ViewModelBase {
         CurrentXp = totalXp;
         XpInCurrentLevel = LevelSystem.GetXpProgressInCurrentLevel(totalXp, Level);
         XpForNextLevel = LevelSystem.GetXpForNextLevel(Level);
+    }
+
+    private async Task ShowAchievementPopups(List<Achievement> achievements) {
+        foreach (var achievement in achievements) {
+            var box = MessageBoxManager.GetMessageBoxStandard("🏆 Achievement Unlocked!",
+                $"{achievement.Icon} {achievement.Name}\n{achievement.Description}",
+                ButtonEnum.Ok);
+            await box.ShowAsync();
+        }
+    }
+
+    // ===== Utilitários estáticos =====
+    private static string GetAppVersion() {
+        var version = Assembly.GetExecutingAssembly()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion;
+        if (string.IsNullOrEmpty(version)) return "v?.?.?";
+        
+        // Remove o sufixo +hash se existir, mantém só X.Y.Z
+        var cleanVersion = version.Split('+')[0];
+        return $"v{cleanVersion}";
     }
 }
