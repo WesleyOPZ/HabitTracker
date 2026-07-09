@@ -35,6 +35,9 @@
         <converters:DifficultyTextGlowConverter x:Key="DifficultyTextGlowConverter" />
         <converters:DifficultyToGlowConverter x:Key="DifficultyToGlowConverter" />
         <converters:XpRatioToWidthConverter x:Key="XpRatioToWidthConverter" />
+        <converters:ColumnTitleToColorConverter x:Key="ColumnTitleToColorConverter" />
+        <converters:ColumnTitleToCardBackgroundConverter x:Key="ColumnTitleToCardBackgroundConverter" />
+
     </Window.Resources>
 
     <DockPanel>
@@ -120,15 +123,18 @@
                                 ClipToBounds="True"
                                 Background="{StaticResource ColorSurface}">
 
-                                <ToolTip.Tip>
-                                    <StackPanel Orientation="Horizontal" Spacing="4" Margin="4">
-                                        <TextBlock Text="Level Progress: " FontWeight="SemiBold" Foreground="{StaticResource ColorTextPrimary}"/>
-                                        <TextBlock Text="{Binding XpInCurrentLevel}" Foreground="{StaticResource ColorTextPrimary}"/>
-                                        <TextBlock Text=" / " Foreground="{StaticResource ColorTextMuted}"/>
-                                        <TextBlock Text="{Binding XpForNextLevel}" Foreground="{StaticResource ColorTextPrimary}"/>
-                                        <TextBlock Text=" XP " Foreground="{StaticResource ColorAccent}" FontWeight="Bold"/>
-                                    </StackPanel>
-                                </ToolTip.Tip>
+                            <ToolTip.Tip>
+                                <StackPanel Orientation="Horizontal" Spacing="4" Margin="4">
+                                    <TextBlock Text="Level Progress: " FontWeight="SemiBold"
+                                               Foreground="{StaticResource ColorTextPrimary}" />
+                                    <TextBlock Text="{Binding XpInCurrentLevel}"
+                                               Foreground="{StaticResource ColorTextPrimary}" />
+                                    <TextBlock Text=" / " Foreground="{StaticResource ColorTextMuted}" />
+                                    <TextBlock Text="{Binding XpForNextLevel}"
+                                               Foreground="{StaticResource ColorTextPrimary}" />
+                                    <TextBlock Text=" XP " Foreground="{StaticResource ColorAccent}" FontWeight="Bold" />
+                                </StackPanel>
+                            </ToolTip.Tip>
 
                             <Border HorizontalAlignment="Left"
                                     CornerRadius="2"
@@ -197,19 +203,19 @@
 
                             <Button.Styles>
                                 <Style Selector="Button:pointerover">
-                                    <Setter Property="Background" Value="{StaticResource ColorSurface}"/>
+                                    <Setter Property="Background" Value="{StaticResource ColorSurface}" />
                                 </Style>
-                        </Button.Styles>
+                            </Button.Styles>
 
                             <TextBlock Text="⚙️" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Button>
+                        </Button>
 
                         <TextBlock
-                                   Text="{Binding AppVersion}"
-                                   FontSize="9"
-                                   Foreground="{StaticResource ColorTextSecondary}"
-                                   HorizontalAlignment="Center"
-                                   Opacity="0.4" />
+                            Text="{Binding AppVersion}"
+                            FontSize="9"
+                            Foreground="{StaticResource ColorTextSecondary}"
+                            HorizontalAlignment="Center"
+                            Opacity="0.4" />
                     </StackPanel>
                 </Grid>
             </Border>
@@ -220,6 +226,7 @@
             <Grid Grid.Column="1" Margin="24">
 
                 <!-- ABA: HABITS -->
+                <!-- -->
                 <Grid
                     IsVisible="{Binding ActiveTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=Habits}"
                     RowDefinitions="Auto, *">
@@ -251,6 +258,7 @@
                     </Grid>
 
                     <!-- Quadro Kanban (As 3 Colunas) -->
+                    <!-- -->
                     <ItemsControl Grid.Row="1" ItemsSource="{Binding KanbanColumns}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -260,29 +268,53 @@
 
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:KanbanColumnViewModel">
-                                <Border Background="{StaticResource ColorSidebar}" CornerRadius="8" Margin="6"
+                                <Border Classes="ColumnContainer"
+                                        Background="{StaticResource ColorSidebar}" CornerRadius="8" Margin="6"
                                         Padding="12">
+
+                                    <Border.Styles>
+                                        <Style Selector="Border.ColumnContainer Border#CountBadge">
+                                            <Setter Property="Opacity" Value="0" />
+                                            <Setter Property="Transitions">
+                                                <Transitions>
+                                                    <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                                                </Transitions>
+                                            </Setter>
+                                        </Style>
+
+                                        <Style Selector="Border.ColumnContainer:pointerover Border#CountBadge">
+                                            <Setter Property="Opacity" Value="1" />
+                                        </Style>
+
+                                    </Border.Styles>
                                     <DockPanel LastChildFill="True">
 
                                         <!-- Cabeçalho da Coluna -->
-                                        <Border DockPanel.Dock="Top" Background="{StaticResource ColorSurface}"
-                                                CornerRadius="6" Padding="8,4" Margin="0,0,0,10">
-                                            <DockPanel>
-                                                <TextBlock Text="{Binding Title}"
+                                        <Border DockPanel.Dock="Top" Background="Transparent"
+                                                Padding="8,4" Margin="0,0,0,10">
+                                            <Grid ColumnDefinitions="*, Auto, *">
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding Title}"
                                                            FontWeight="Bold"
                                                            FontSize="14"
-                                                           Foreground="{StaticResource ColorTextPrimary}"
+                                                           Foreground="{Binding Title, Converter={StaticResource ColumnTitleToColorConverter}}"
+                                                           HorizontalAlignment="Center"
                                                            VerticalAlignment="Center" />
-                                                <Border Background="{StaticResource ColorBorder}"
+
+                                                <Border Grid.Column="2"
+                                                        x:Name="CountBadge"
+                                                        Background="{StaticResource ColorBorder}"
                                                         CornerRadius="10"
                                                         Padding="6,2"
                                                         HorizontalAlignment="Right">
+
                                                     <TextBlock Text="{Binding Habits.Count}"
                                                                FontSize="12"
                                                                FontWeight="Bold"
                                                                Foreground="{StaticResource ColorTextSecondary}" />
+
                                                 </Border>
-                                            </DockPanel>
+                                            </Grid>
                                         </Border>
 
                                         <!-- Lista de Cards Rolável -->
@@ -296,10 +328,8 @@
                                                         <Border Classes="card" Margin="0,0,0,10" Padding="14"
                                                                 CornerRadius="8"
                                                                 Background="{StaticResource ColorCard}"
-                                                                BorderThickness="1"
-                                                                BorderBrush="{StaticResource ColorBorder}"
+                                                                BorderThickness="0"
                                                                 BoxShadow="0 4 10 0 #A0000000">
-
 
                                                             <!-- Menu de contexto (botão direito no card) para abrir Histórico e Excluir hábito -->
                                                             <Border.ContextMenu>
@@ -368,7 +398,18 @@
                                                                 </Style>
                                                             </Border.Styles>
 
+                                                            <!-- ÚNICO FILHO do Border do card -->
                                                             <Grid Margin="-14">
+
+                                                                <!-- Faixa de cor lateral indicando a coluna/status -->
+                                                                <Border Width="3"
+                                                                        Margin="14,0,0,0"
+                                                                        HorizontalAlignment="Right"
+                                                                        CornerRadius="0,8,8,0"
+                                                                        Opacity="0.8"
+                                                                        Background="{Binding $parent[ItemsControl].DataContext.Title, Converter={StaticResource ColumnTitleToCardBackgroundConverter}}"
+                                                                        x:CompileBindings="False" />
+
                                                                 <!-- CAMADA DE BAIXO: conteúdo normal do card -->
                                                                 <StackPanel Spacing="8" Margin="14">
 
@@ -390,11 +431,11 @@
                                                                         </Border>
                                                                     </DockPanel>
 
-                                                                        <TextBlock Text="{Binding Description}"
-                                                                                FontSize="12"
-                                                                                Foreground="{StaticResource ColorTextSecondary}"
-                                                                                TextWrapping="Wrap" Margin="0,2,0,4"
-                                                                                IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                                                    <TextBlock Text="{Binding Description}"
+                                                                               FontSize="12"
+                                                                               Foreground="{StaticResource ColorTextSecondary}"
+                                                                               TextWrapping="Wrap" Margin="0,2,0,4"
+                                                                               IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
                                                                     <WrapPanel Orientation="Horizontal" Margin="0,2">
                                                                         <Border
@@ -480,6 +521,7 @@
                                             </ItemsControl>
                                         </ScrollViewer>
                                     </DockPanel>
+
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -496,6 +538,7 @@
                                         Padding="20"
                                         Margin="0,0,0,12"
                                         Opacity="{Binding IsUnlocked, Converter={StaticResource BoolToOpacityConverter}}">
+
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="{Binding Icon}" FontSize="28" VerticalAlignment="Center"
                                                    Margin="0,0,16,0" />
@@ -512,7 +555,6 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
-
 
 
                 <!-- ABA: PROFILE (UNIFICADA COM DETALHES DE PERFORMANCE/ESTATÍSTICAS) -->
@@ -614,14 +656,15 @@
                 </ScrollViewer>
 
                 <!-- ABA: Settings -->
-                <Grid IsVisible="{Binding ActiveTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=Settings}">
+                <Grid
+                    IsVisible="{Binding ActiveTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=Settings}">
                     <TextBlock Text="Settings"
                                Foreground="{StaticResource ColorTextSecondary}"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"
                                FontSize="15"
                                FontStyle="Italic"
-                               Opacity="0.5"/>
+                               Opacity="0.5" />
                 </Grid>
 
             </Grid>

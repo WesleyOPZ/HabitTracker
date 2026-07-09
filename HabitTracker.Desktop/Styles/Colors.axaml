@@ -16,9 +16,13 @@
     <SolidColorBrush x:Key="ColorAccentHover">#7c3aed</SolidColorBrush>
     <SolidColorBrush x:Key="ColorDanger">#ef4444</SolidColorBrush>
 
-    <SolidColorBrush x:Key="StatusToDo">#3f3f46</SolidColorBrush>
+    <SolidColorBrush x:Key="StatusToDo">#94a3b8</SolidColorBrush>
     <SolidColorBrush x:Key="StatusInProgress">#3b82f6</SolidColorBrush>
-    <SolidColorBrush x:Key="StatusDone">#22c55e</SolidColorBrush>
+    <SolidColorBrush x:Key="StatusDone">#34d399</SolidColorBrush>
+
+    <SolidColorBrush x:Key="CardTintToDo" Color="#94a3b8" Opacity="0.05" />
+    <SolidColorBrush x:Key="CardTintInProgress" Color="#3b82f6" Opacity="0.07" />
+    <SolidColorBrush x:Key="CardTintDone" Color="#22c55e" Opacity="0.06" />
 
     <SolidColorBrush x:Key="DifficultyEasy">#3bb478</SolidColorBrush>
     <SolidColorBrush x:Key="DifficultyNormal">#3b82f6</SolidColorBrush>
