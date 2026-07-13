@@ -5,6 +5,5 @@ public enum ActiveTab
     Habits,
     Achievements,
     Profile,
-    Statistics,
     Settings
 }

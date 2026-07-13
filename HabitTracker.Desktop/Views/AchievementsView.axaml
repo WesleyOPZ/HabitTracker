@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:HabitTracker.Desktop.ViewModels"
+             xmlns:models="using:HabitTracker.Core.Models"
+             xmlns:converters="using:HabitTracker.Desktop.Converters"
+             x:Class="HabitTracker.Desktop.Views.AchievementsView"
+             x:DataType="vm:MainWindowViewModel">
+
+    <UserControl.Resources>
+        <converters:BoolToOpacityConverter x:Key="BoolToOpacityConverter" />
+    </UserControl.Resources>
+
+    <ScrollViewer>
+        <ItemsControl ItemsSource="{Binding Achievements}" Margin="20">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:Achievement">
+                    <Border Classes="card"
+                            Padding="20"
+                            Margin="0,0,0,12"
+                            Opacity="{Binding IsUnlocked, Converter={StaticResource BoolToOpacityConverter}}">
+
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Icon}" FontSize="28" VerticalAlignment="Center"
+                                       Margin="0,0,16,0" />
+                            <StackPanel>
+                                <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="Bold"
+                                           Foreground="{StaticResource ColorTextPrimary}" />
+                                <TextBlock Text="{Binding Description}" FontSize="12"
+                                           Foreground="{StaticResource ColorTextSecondary}"
+                                           Margin="0,4,0,0" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </ScrollViewer>
+</UserControl>

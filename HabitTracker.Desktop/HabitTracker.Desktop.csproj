@@ -43,5 +43,17 @@
 		<Compile Update="Views\EditProfileDialog.axaml">
 			<SubType>Code</SubType>
 		</Compile>
+		<Compile Update="Views\HabitsView.axaml.cs">
+		  <DependentUpon>HabitsView.axaml</DependentUpon>
+		  <SubType>Code</SubType>
+		</Compile>
+		<Compile Update="Views\AchievementsView.axaml.cs">
+		  <DependentUpon>AchievementsView.axaml</DependentUpon>
+		  <SubType>Code</SubType>
+		</Compile>
+		<Compile Update="Views\ProfileView.axaml.cs">
+		  <DependentUpon>ProfileView.axaml</DependentUpon>
+		  <SubType>Code</SubType>
+		</Compile>
 	</ItemGroup>
 </Project>

@@ -1,13 +1,12 @@
 using System;
 using System.Collections.Generic;
-using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HabitTracker.Core.Models;
 
 namespace HabitTracker.Desktop.ViewModels;
 
-public partial class CreateHabitViewModel : ViewModelBase
+public partial class CreateHabitViewModel : DialogViewModelBase
 {
     [ObservableProperty] private string _name = "";
     [ObservableProperty] private string _description = "";
@@ -18,17 +17,15 @@ public partial class CreateHabitViewModel : ViewModelBase
     public IEnumerable<Category> Categories => Enum.GetValues<Category>();
 
     public bool Confirmed { get; set; }
-    private Window? _window;
-    public void SetWindow(Window window) => _window = window;
 
     [RelayCommand]
     private void Confirm()
     {
         if (string.IsNullOrWhiteSpace(Name)) return;
         Confirmed = true;
-        _window?.Close();
+        Close?.Invoke();
     }
 
     [RelayCommand]
-    private void Cancel() => _window?.Close();
+    private void Cancel() => Close?.Invoke();
 }

@@ -1,0 +1,101 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:HabitTracker.Desktop.ViewModels"
+             x:Class="HabitTracker.Desktop.Views.ProfileView"
+             x:DataType="vm:MainWindowViewModel">
+
+    <ScrollViewer>
+        <StackPanel Margin="20" Spacing="16">
+
+            <!-- Card Detalhado do Perfil do Usuário -->
+            <Border Classes="card" Padding="24">
+                <StackPanel Spacing="12">
+                    <StackPanel Orientation="Horizontal" Spacing="16">
+                        <Border Width="72" Height="72" CornerRadius="36"
+                                Background="{StaticResource ColorSurface}">
+                            <TextBlock Text="👤" FontSize="32" HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{Binding ProfileUserName}" FontSize="22" FontWeight="Bold"
+                                       Foreground="{StaticResource ColorTextPrimary}" />
+                            <TextBlock FontSize="13" Foreground="{StaticResource ColorTextSecondary}">
+                                <Run Text="Level " />
+                                <Run Text="{Binding Level}" FontWeight="Bold" />
+                                <Run Text=" · " />
+                                <Run Text="{Binding LevelName}" />
+                            </TextBlock>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding ProfileDescription}" FontSize="13"
+                               Foreground="{StaticResource ColorTextSecondary}" TextWrapping="Wrap" />
+
+                    <WrapPanel Orientation="Horizontal">
+                        <Border Background="{StaticResource ColorSurface}"
+                                CornerRadius="{StaticResource RadiusSm}" Padding="10,6" Margin="0,0,8,8">
+                            <TextBlock FontSize="12" Foreground="{StaticResource ColorTextPrimary}">
+                                <Run Text="⚧ " />
+                                <Run Text="{Binding ProfileGender}" />
+                            </TextBlock>
+                        </Border>
+                        <Border Background="{StaticResource ColorSurface}"
+                                CornerRadius="{StaticResource RadiusSm}" Padding="10,6" Margin="0,0,8,8">
+                            <TextBlock FontSize="12" Foreground="{StaticResource ColorTextPrimary}">
+                                <Run Text="🎂 " />
+                                <Run Text="{Binding ProfileDateOfBirth}" />
+                            </TextBlock>
+                        </Border>
+                        <Border Background="{StaticResource ColorSurface}"
+                                CornerRadius="{StaticResource RadiusSm}" Padding="10,6" Margin="0,0,8,8">
+                            <TextBlock FontSize="12" Foreground="{StaticResource ColorTextPrimary}">
+                                <Run Text="📅 Member since " />
+                                <Run Text="{Binding ProfileMemberSince}" />
+                            </TextBlock>
+                        </Border>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Card de Estatísticas Gerais Incorporado -->
+            <Border Classes="card" Padding="24">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="📊 Overview de Performance" FontSize="16" FontWeight="Bold"
+                               Foreground="{StaticResource ColorTextPrimary}" Margin="0,0,0,4" />
+
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" RowSpacing="10" ColumnSpacing="10">
+                        <!-- Bloco de XP Total -->
+                        <Border Grid.Row="0" Grid.Column="0" Background="{StaticResource ColorSurface}"
+                                Padding="14" CornerRadius="8">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="⭐ Total XP Acumulado" FontSize="12"
+                                           Foreground="{StaticResource ColorTextSecondary}" />
+                                <TextBlock Text="{Binding CurrentXp}" FontSize="18" FontWeight="Bold"
+                                           Foreground="{StaticResource ColorTextPrimary}" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Bloco de Streaks de Dias -->
+                        <Border Grid.Row="0" Grid.Column="1" Background="{StaticResource ColorSurface}"
+                                Padding="14" CornerRadius="8">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="🔥 Global Longest Streak" FontSize="12"
+                                           Foreground="{StaticResource ColorTextSecondary}" />
+                                <TextBlock Text="{Binding GlobalLongestStreak, StringFormat='\{0\} days'}"
+                                           FontSize="18" FontWeight="Bold"
+                                           Foreground="{StaticResource ColorTextPrimary}" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Botões de Ação do Perfil -->
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <Button Classes="primary" Content="✏️ Edit Profile"
+                        Command="{Binding OpenEditProfileCommand}" Padding="16,10" />
+                <Button Classes="secondary" Content="👁 Preview" Padding="16,10" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

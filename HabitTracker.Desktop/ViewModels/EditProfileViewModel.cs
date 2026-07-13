@@ -9,8 +9,7 @@ using HabitTracker.Desktop.Models;
 
 namespace HabitTracker.Desktop.ViewModels;
 
-public partial class EditProfileViewModel : ViewModelBase
-{
+public partial class EditProfileViewModel : DialogViewModelBase {
     [ObservableProperty] private string _userName = string.Empty;
     [ObservableProperty] private string _description = string.Empty;
     [ObservableProperty] private Gender _gender = Gender.Unknown;
@@ -25,30 +24,24 @@ public partial class EditProfileViewModel : ViewModelBase
         .Select(a => a.Achievement.Type)
         .ToList();
 
-    public EditProfileViewModel(UserProfile profile, List<Achievement> allAchievements)
-    {
+    public EditProfileViewModel(UserProfile profile, List<Achievement> allAchievements) {
         UserName = profile.UserName;
         Description = profile.Description;
         Gender = profile.Gender;
         DateOfBirth = profile.DateOfBirth.HasValue ? new DateTimeOffset(profile.DateOfBirth.Value) : null;
 
         var unlocked = allAchievements.Where(a => a.IsUnlocked);
-        foreach (var achievement in unlocked)
-        {
+        foreach (var achievement in unlocked) {
             var isSelected = profile.FeaturedAchievements.Contains(achievement.Type);
-            UnlockedAchievements.Add(new SelectableAchievement(achievement, isSelected, (() =>  CanSelectMore)));
+            UnlockedAchievements.Add(new SelectableAchievement(achievement, isSelected, (() => CanSelectMore)));
         }
     }
 
     [RelayCommand]
-    private void ToggleAchievement(SelectableAchievement item)
-    {
-        if (item.IsSelected)
-        {
+    private void ToggleAchievement(SelectableAchievement item) {
+        if (item.IsSelected) {
             item.IsSelected = false;
-        }
-        else
-        {
+        } else {
             int selectedCount = UnlockedAchievements.Count(a => a.IsSelected);
             if (selectedCount >= 3) return;
             item.IsSelected = true;
@@ -56,8 +49,7 @@ public partial class EditProfileViewModel : ViewModelBase
 
         OnPropertyChanged(nameof(CanSelectMore));
 
-        foreach (var a in UnlockedAchievements)
-        {
+        foreach (var a in UnlockedAchievements) {
             a.NotifyCanToggleChanged();
         }
     }
@@ -65,18 +57,14 @@ public partial class EditProfileViewModel : ViewModelBase
     public bool CanSelectMore => UnlockedAchievements.Count(a => a.IsSelected) < 3;
 
     [RelayCommand]
-    private void Confirm()
-    {
+    private void Confirm() {
         Confirmed = true;
         Close?.Invoke();
     }
 
     [RelayCommand]
-    private void Cancel()
-    {
+    private void Cancel() {
         Confirmed = false;
         Close?.Invoke();
     }
-
-    public Action? Close { get; set; }
 }

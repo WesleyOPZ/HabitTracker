@@ -20,19 +20,20 @@
     <SolidColorBrush x:Key="StatusInProgress">#3b82f6</SolidColorBrush>
     <SolidColorBrush x:Key="StatusDone">#34d399</SolidColorBrush>
 
-    <SolidColorBrush x:Key="CardTintToDo" Color="#94a3b8" Opacity="0.05" />
-    <SolidColorBrush x:Key="CardTintInProgress" Color="#3b82f6" Opacity="0.07" />
-    <SolidColorBrush x:Key="CardTintDone" Color="#22c55e" Opacity="0.06" />
-
     <SolidColorBrush x:Key="DifficultyEasy">#3bb478</SolidColorBrush>
     <SolidColorBrush x:Key="DifficultyNormal">#3b82f6</SolidColorBrush>
     <SolidColorBrush x:Key="DifficultyHard">#ef4444</SolidColorBrush>
     <SolidColorBrush x:Key="DifficultyLegendary">#f59e0b</SolidColorBrush>
 
+    <SolidColorBrush x:Key="DifficultyBgEasy">#152a1e</SolidColorBrush>
+    <SolidColorBrush x:Key="DifficultyBgNormal">#1a2640</SolidColorBrush>
+    <SolidColorBrush x:Key="DifficultyBgHard">#3a1212</SolidColorBrush>
+    <SolidColorBrush x:Key="DifficultyBgLegendary">#3a2a0a</SolidColorBrush>
+    <SolidColorBrush x:Key="DifficultyBgDefault">#1f1f22</SolidColorBrush>
+
+    <BoxShadows x:Key="LegendaryGlow">0 0 20 0 #80f59e0b</BoxShadows>
+
     <SolidColorBrush x:Key="ColorStreak">#f97316</SolidColorBrush>
-
-
-    <BoxShadows x:Key="LegendaryGlow">0 0 15 2 #40f59e0b</BoxShadows>
 
     <CornerRadius x:Key="RadiusSm">6</CornerRadius>
     <CornerRadius x:Key="RadiusMd">8</CornerRadius>

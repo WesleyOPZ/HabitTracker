@@ -19,7 +19,6 @@ using HabitTracker.Desktop.Models;
 namespace HabitTracker.Desktop.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase {
-
     // ===== Campos privados =====
     private readonly HabitService _habitService;
     private List<Habit> _allHabits = new();
@@ -96,7 +95,7 @@ public partial class MainWindowViewModel : ViewModelBase {
         if (mainWindow == null) return;
 
         var viewModel = new CreateHabitViewModel();
-        var dialog = new CreateHabitDialog { DataContext = viewModel };
+        var dialog = new CreateHabitDialog(viewModel);
 
         await dialog.ShowDialog(mainWindow);
 
@@ -132,7 +131,8 @@ public partial class MainWindowViewModel : ViewModelBase {
 
         if (mainWindow == null) return;
 
-        var dialog = new HabitHistoryDialog(habit);
+        var viewModel = new HabitHistoryViewModel(habit);
+        var dialog = new HabitHistoryDialog(viewModel);
         await dialog.ShowDialog(mainWindow);
     }
 
@@ -228,19 +228,14 @@ public partial class MainWindowViewModel : ViewModelBase {
         }
 
         ApplyFilter();
+        
+        RefreshXpStats();
 
-        int totalXp = _habitService.GetProfile().TotalXp;
-        Level = LevelSystem.CalculateLevel(totalXp);
-        LevelName = LevelSystem.GetLevelName(Level);
-        CurrentXp = totalXp;
-        XpInCurrentLevel = LevelSystem.GetXpProgressInCurrentLevel(totalXp, Level);
-        XpForNextLevel = LevelSystem.GetXpForNextLevel(Level);
         Achievements.Clear();
         foreach (var achievement in _habitService.Achievements.GetAllAchievements())
             Achievements.Add(achievement);
 
         LoadProfile();
-        LoadStatistics();
     }
 
     private void ApplyFilter() {
@@ -287,7 +282,7 @@ public partial class MainWindowViewModel : ViewModelBase {
         StatTotalCompletions = stats.TotalCompletions;
 
         StatBestStreakName = stats.BestStreak?.Name ?? "No habits yet";
-        StatBestStreakDays = stats.BestStreak?.LongestStreak ?? 0;
+        StatBestStreakDays = stats.BestStreak?.CurrentStreak ?? 0;
     }
 
     private void RefreshXpStats() {
@@ -297,6 +292,8 @@ public partial class MainWindowViewModel : ViewModelBase {
         CurrentXp = totalXp;
         XpInCurrentLevel = LevelSystem.GetXpProgressInCurrentLevel(totalXp, Level);
         XpForNextLevel = LevelSystem.GetXpForNextLevel(Level);
+        
+        LoadStatistics();
     }
 
     private async Task ShowAchievementPopups(List<Achievement> achievements) {
@@ -314,7 +311,7 @@ public partial class MainWindowViewModel : ViewModelBase {
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
             .InformationalVersion;
         if (string.IsNullOrEmpty(version)) return "v?.?.?";
-        
+
         // Remove o sufixo +hash se existir, mantém só X.Y.Z
         var cleanVersion = version.Split('+')[0];
         return $"v{cleanVersion}";
