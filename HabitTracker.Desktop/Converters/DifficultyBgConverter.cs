@@ -15,10 +15,10 @@ public class DifficultyBgConverter : IValueConverter
             ? $"DifficultyBg{difficulty}"
             : "DifficultyBgDefault";
 
-        if (Application.Current!.TryFindResource(resourceKey, out var brush))
-            return brush;
+        if (Application.Current!.TryFindResource(resourceKey, out var brush) && brush is IBrush foundBrush)
+            return foundBrush;
         
-        return new SolidColorBrush(Color.Parse("#1f1f22"));
+        return Brushes.White;
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

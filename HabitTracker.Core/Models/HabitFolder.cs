@@ -6,4 +6,5 @@ public class HabitFolder
     public string Name {  get; set; } = string.Empty;
     public int DisplayOrder {  get; set; }
     public DateTime CreatedAt {  get; set; }
+    public string? Color { get; set; }
 } 

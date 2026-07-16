@@ -55,5 +55,13 @@
 		  <DependentUpon>ProfileView.axaml</DependentUpon>
 		  <SubType>Code</SubType>
 		</Compile>
+		<Compile Update="Views\TextInputDialog.axaml.cs">
+		  <DependentUpon>TextInputDialog.axaml</DependentUpon>
+		  <SubType>Code</SubType>
+		</Compile>
+		<Compile Update="Views\ColorPickerDialog.axaml.cs">
+		  <SubType>Code</SubType>
+		  <DependentUpon>ColorPickerDialog.axaml</DependentUpon>
+		</Compile>
 	</ItemGroup>
 </Project>

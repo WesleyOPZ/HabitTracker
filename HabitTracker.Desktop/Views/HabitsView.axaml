@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+ <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:HabitTracker.Desktop.ViewModels"
              xmlns:converters="using:HabitTracker.Desktop.Converters"
@@ -6,17 +6,313 @@
              x:DataType="vm:MainWindowViewModel">
 
     <UserControl.Resources>
+        <!-- Conversores -->
         <converters:CategoryDisplayConverter x:Key="CategoryDisplayConverter" />
         <converters:DifficultyColorConverter x:Key="DifficultyColorConverter" />
         <converters:DifficultyBgConverter x:Key="DifficultyBgConverter" />
         <converters:DifficultyToGlowConverter x:Key="DifficultyToGlowConverter" />
-        <converters:ColumnTitleToColorConverter x:Key="ColumnTitleToColorConverter" />
-        <converters:ColumnTitleToCardBackgroundConverter x:Key="ColumnTitleToCardBackgroundConverter" />
+        <converters:ColumnColorConverter x:Key="ColumnColorConverter" />
+        <converters:ColumnIdToCardBackgroundConverter x:Key="ColumnIdToCardBackgroundConverter" />
+        <converters:CountAtMostConverter x:Key="CountAtMostConverter" />
+        <converters:CountAboveConverter x:Key="CountAboveConverter" />
+
+        <!-- TEMPLATE DA COLUNA REUTILIZÁVEL (Resolvendo o Not Found) -->
+        <DataTemplate x:Key="KanbanColumnTemplate" x:DataType="vm:KanbanColumnViewModel">
+            <Border Classes="ColumnContainer"
+                    Background="{StaticResource ColorSidebar}" CornerRadius="8" Margin="6"
+                    Padding="12"
+                    DragDrop.AllowDrop="True"
+                    DragDrop.DragOver="Column_DragOver"
+                    DragDrop.Drop="Column_Drop">
+
+                <Border.Styles>
+                    <Style Selector="Border.ColumnContainer Border#CountBadge">
+                        <Setter Property="Opacity" Value="0" />
+                        <Setter Property="Transitions">
+                            <Transitions>
+                                <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                            </Transitions>
+                        </Setter>
+                    </Style>
+
+                    <Style Selector="Border.ColumnContainer:pointerover Border#CountBadge">
+                        <Setter Property="Opacity" Value="1" />
+                    </Style>
+                </Border.Styles>
+
+                <DockPanel LastChildFill="True">
+
+                    <!-- Cabeçalho da Coluna -->
+                    <Border DockPanel.Dock="Top" Background="Transparent"
+                            Padding="8,4" Margin="0,0,0,10"
+                            Cursor="Hand"
+                            PointerPressed="ColumnHeader_PointerPressed"
+                            PointerMoved="ColumnHeader_PointerMoved">
+                        <Grid ColumnDefinitions="Auto, *, Auto, Auto">
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Title}"
+                                       FontWeight="Bold"
+                                       FontSize="14"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                            <TextBlock.Foreground>
+                                <MultiBinding Converter="{StaticResource ColumnColorConverter}">
+                                    <Binding Path="Color" />
+                                    <Binding Path="Id" />
+                                </MultiBinding>
+                            </TextBlock.Foreground>
+
+                            <Button Grid.Column="2"
+                                    Content="⋮"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Padding="4"
+                                    Foreground="{StaticResource ColorTextSecondary}"
+                                    x:CompileBindings="False">
+                                <Button.Flyout>
+                                    <Flyout Placement="BottomEdgeAlignedRight">
+                                        <StackPanel Spacing="4" MinWidth="140">
+                                            <Button Content="🎨 Color"
+                                                    Command="{Binding $parent[Window].DataContext.ChangeColumnColorCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Left" />
+                                            <Button Content="✏️ Renomear"
+                                                    Command="{Binding $parent[Window].DataContext.RenameColumnCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Left" />
+                                            <Button Content="🗑️ Excluir"
+                                                    Command="{Binding $parent[Window].DataContext.DeleteColumnCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    IsVisible="{Binding IsCustom}"
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Left" />
+                                        </StackPanel>
+                                    </Flyout>
+                                </Button.Flyout>
+                            </Button>
+
+                            <Border Grid.Column="3"
+                                    x:Name="CountBadge"
+                                    Background="{StaticResource ColorBorder}"
+                                    CornerRadius="10"
+                                    Padding="6,2"
+                                    HorizontalAlignment="Right">
+
+                                <TextBlock Text="{Binding Habits.Count}"
+                                           FontSize="12"
+                                           FontWeight="Bold"
+                                           Foreground="{StaticResource ColorTextSecondary}" />
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <!-- Lista de Cards Rolável -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Habits}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+
+                                    <!-- CARD DO HÁBITO ORIGINAL -->
+                                    <Border Classes="card" Margin="0,0,0,10" Padding="14"
+                                            CornerRadius="8"
+                                            Background="{StaticResource ColorCard}"
+                                            BorderThickness="0"
+                                            BoxShadow="0 4 10 0 #A0000000">
+
+                                        <!-- Menu de contexto (botão direito no card) -->
+                                        <Border.ContextMenu>
+                                            <ContextMenu Background="{StaticResource ColorSurface}"
+                                                         BorderBrush="{StaticResource ColorBorder}"
+                                                         x:CompileBindings="False">
+                                                <MenuItem Header="📅 Ver Histórico"
+                                                          Command="{Binding $parent[Window].DataContext.OpenHabitHistoryCommand}"
+                                                          CommandParameter="{Binding}" />
+
+                                                <MenuItem Header="🗑️ Excluir Hábito"
+                                                          Command="{Binding $parent[Window].DataContext.DeleteHabitCommand}"
+                                                          CommandParameter="{Binding}"
+                                                          Foreground="{StaticResource ColorDanger}" />
+                                            </ContextMenu>
+                                        </Border.ContextMenu>
+
+                                        <Border.Styles>
+                                            <Style Selector="Border.card">
+                                                <Setter Property="Transitions">
+                                                    <Transitions>
+                                                        <TransformOperationsTransition
+                                                            Property="RenderTransform"
+                                                            Duration="0:0:0.15" />
+                                                    </Transitions>
+                                                </Setter>
+                                            </Style>
+
+                                            <Style Selector="Border.card:pointerover">
+                                                <Setter Property="BoxShadow"
+                                                        Value="0 6 16 2 #C0000000" />
+                                                <Setter Property="RenderTransform"
+                                                        Value="translateY(-0.8px)" />
+                                            </Style>
+
+                                            <Style Selector="Button#BtnMoveBack">
+                                                <Setter Property="Opacity" Value="0.0" />
+                                                <Setter Property="Transitions">
+                                                    <Transitions>
+                                                        <DoubleTransition Property="Opacity"
+                                                                Duration="0:0:0.15" />
+                                                    </Transitions>
+                                                </Setter>
+                                            </Style>
+
+                                            <Style
+                                                Selector="Border#LeftZone:pointerover Button#BtnMoveBack">
+                                                <Setter Property="Opacity" Value="1.0" />
+                                            </Style>
+
+                                            <Style Selector="Button#BtnMoveForward">
+                                                <Setter Property="Opacity" Value="0.0" />
+                                                <Setter Property="Transitions">
+                                                    <Transitions>
+                                                        <DoubleTransition Property="Opacity"
+                                                                Duration="0:0:0.15" />
+                                                    </Transitions>
+                                                </Setter>
+                                            </Style>
+
+                                            <Style
+                                                Selector="Border#RightZone:pointerover Button#BtnMoveForward">
+                                                <Setter Property="Opacity" Value="1.0" />
+                                            </Style>
+                                        </Border.Styles>
+
+                                        <Grid Margin="-14">
+                                            <!-- Faixa de cor lateral indicando a coluna/status -->
+                                            <Border Width="3"
+                                                    Margin="14,0,0,0"
+                                                    HorizontalAlignment="Right"
+                                                    CornerRadius="0,8,8,0"
+                                                    Opacity="0.8"
+                                                    Background="{Binding $parent[ItemsControl].DataContext.Id, Converter={StaticResource ColumnIdToCardBackgroundConverter}}"
+                                                    x:CompileBindings="False" />
+
+                                            <!-- Conteúdo normal do card -->
+                                            <StackPanel Spacing="8" Margin="14">
+
+                                                <DockPanel>
+                                                    <TextBlock Text="{Binding Name}" FontSize="15"
+                                                               FontWeight="Bold"
+                                                               Foreground="{StaticResource ColorTextPrimary}"
+                                                               TextWrapping="Wrap" MaxWidth="180" />
+                                                    <Border
+                                                        Background="{Binding Difficulty, Converter={StaticResource DifficultyBgConverter}}"
+                                                        CornerRadius="4"
+                                                        Padding="6,2"
+                                                        HorizontalAlignment="Right"
+                                                        VerticalAlignment="Top"
+                                                        BoxShadow="{Binding Difficulty, Converter={StaticResource DifficultyToGlowConverter}}">
+                                                        <TextBlock Text="{Binding Difficulty}"
+                                                                FontSize="10" FontWeight="Bold"
+                                                                Foreground="{Binding Difficulty, Converter={StaticResource DifficultyColorConverter}}" />
+                                                    </Border>
+                                                </DockPanel>
+
+                                                <TextBlock Text="{Binding Description}"
+                                                           FontSize="12"
+                                                           Foreground="{StaticResource ColorTextSecondary}"
+                                                           TextWrapping="Wrap" Margin="0,2,0,4"
+                                                           IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+                                                <WrapPanel Orientation="Horizontal" Margin="0,2">
+                                                    <Border Background="{StaticResource ColorSurface}"
+                                                            CornerRadius="4" Padding="4,2"
+                                                            Margin="0,0,6,0">
+                                                        <TextBlock Text="{Binding Category}"
+                                                                FontSize="10"
+                                                                Foreground="{StaticResource ColorTextSecondary}" />
+                                                    </Border>
+                                                    <StackPanel Orientation="Horizontal"
+                                                            VerticalAlignment="Center">
+                                                        <TextBlock Text="✨ +" FontSize="10"
+                                                                Foreground="{StaticResource ColorAccent}" />
+                                                        <TextBlock Text="{Binding XpGainedToday}"
+                                                                FontSize="10" FontWeight="Bold"
+                                                                Foreground="{StaticResource ColorAccent}" />
+                                                        <TextBlock Text=" XP" FontSize="10"
+                                                                Foreground="{StaticResource ColorAccent}" />
+                                                    </StackPanel>
+                                                </WrapPanel>
+
+                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                    <TextBlock Text="🔥" FontSize="12" />
+                                                    <TextBlock Text="{Binding CurrentStreak}"
+                                                               FontSize="12"
+                                                               FontWeight="Bold"
+                                                               Foreground="{StaticResource ColorStreak}" />
+                                                    <TextBlock Text="streak days" FontSize="11"
+                                                               Foreground="{StaticResource ColorStreak}"
+                                                               VerticalAlignment="Center" />
+                                                </StackPanel>
+
+                                                <!-- Espaço reservado embaixo pros botões não tamparem o texto -->
+                                                <Border Height="28" />
+                                            </StackPanel>
+
+                                            <!-- CAMADA DE CIMA: zonas de hover ocupando o card inteiro -->
+                                            <Grid x:Name="ActionGrid"
+                                                  ColumnDefinitions="*, *"
+                                                  x:CompileBindings="False">
+
+                                                <Border Grid.Column="0"
+                                                        x:Name="LeftZone"
+                                                        Background="Transparent">
+                                                    <Button x:Name="BtnMoveBack"
+                                                            Command="{Binding $parent[Window].DataContext.MoveHabitBackCommand}"
+                                                            CommandParameter="{Binding}"
+                                                            Content="◀"
+                                                            ToolTip.Tip="Mover para trás"
+                                                            Background="Transparent"
+                                                            BorderThickness="0"
+                                                            Padding="8,4"
+                                                            Width="36"
+                                                            HorizontalAlignment="Left"
+                                                            HorizontalContentAlignment="Center"
+                                                            VerticalAlignment="Stretch"
+                                                            VerticalContentAlignment="Center" />
+                                                </Border>
+
+                                                <Border Grid.Column="1"
+                                                        x:Name="RightZone"
+                                                        Background="Transparent">
+                                                    <Button x:Name="BtnMoveForward"
+                                                            Command="{Binding $parent[Window].DataContext.MoveHabitForwardCommand}"
+                                                            CommandParameter="{Binding}"
+                                                            Content="▶"
+                                                            ToolTip.Tip="Mover para frente"
+                                                            Background="Transparent"
+                                                            BorderThickness="0"
+                                                            Padding="8,4"
+                                                            Width="36"
+                                                            HorizontalAlignment="Right"
+                                                            HorizontalContentAlignment="Center"
+                                                            VerticalAlignment="Stretch"
+                                                            VerticalContentAlignment="Center" />
+                                                </Border>
+                                            </Grid>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </DataTemplate>
     </UserControl.Resources>
 
     <Grid RowDefinitions="Auto, *">
 
-        <!-- Topo: Filtro de Categoria e Novo Hábito -->
+        <!-- Topo: Filtro de Categoria e Menu de Ações -->
         <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="6,0,6,16">
             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                 <TextBlock Text="📁 Category:"
@@ -36,268 +332,68 @@
                     </ComboBox.ItemTemplate>
                 </ComboBox>
             </StackPanel>
+
             <Button Grid.Column="1"
                     Classes="primary"
-                    Content="+ New Habit"
-                    Command="{Binding OpenCreateHabitCommand}" />
+                    Content="⋮"
+                    Width="36"
+                    Height="36"
+                    Padding="0"
+                    FontSize="18"
+                    CornerRadius="8"
+                    Background="{StaticResource ColorSurface}"
+                    Foreground="{StaticResource ColorTextPrimary}"
+                    HorizontalContentAlignment="Center"
+                    VerticalContentAlignment="Center">
+                <Button.Flyout>
+                    <Flyout Placement="BottomEdgeAlignedRight">
+                        <StackPanel Spacing="4" MinWidth="160">
+                            <Button Content="+ New Habit"
+                                    Command="{Binding OpenCreateHabitCommand}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left" />
+                            <Button Content="+ New Column"
+                                    Command="{Binding OpenCreateColumnCommand}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left" />
+                        </StackPanel>
+                    </Flyout>
+                </Button.Flyout>
+            </Button>
         </Grid>
 
-        <!-- Quadro Kanban (As 3 Colunas) -->
-        <ItemsControl Grid.Row="1" ItemsSource="{Binding KanbanColumns}">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <UniformGrid Rows="1" Columns="3" Margin="0" HorizontalAlignment="Stretch" />
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
+        <!-- Quadro Kanban (N Colunas) -->
+        <Grid Grid.Row="1">
 
-            <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:KanbanColumnViewModel">
-                    <Border Classes="ColumnContainer"
-                            Background="{StaticResource ColorSidebar}" CornerRadius="8" Margin="6"
-                            Padding="12">
+            <!-- Até 5 colunas: estica pra preencher a largura disponível -->
+            <ItemsControl ItemsSource="{Binding KanbanColumns}"
+                          ItemTemplate="{StaticResource KanbanColumnTemplate}"
+                          IsVisible="{Binding KanbanColumns.Count, Converter={StaticResource CountAtMostConverter}, ConverterParameter=4}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Rows="1" Margin="0" HorizontalAlignment="Stretch" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
 
-                        <Border.Styles>
-                            <Style Selector="Border.ColumnContainer Border#CountBadge">
-                                <Setter Property="Opacity" Value="0" />
-                                <Setter Property="Transitions">
-                                    <Transitions>
-                                        <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
-                                    </Transitions>
-                                </Setter>
-                            </Style>
+            <!-- Mais de 5 colunas: largura fixa por coluna + rolagem horizontal -->
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
+                          IsVisible="{Binding KanbanColumns.Count, Converter={StaticResource CountAboveConverter}, ConverterParameter=4}">
+                <ItemsControl ItemsSource="{Binding KanbanColumns}"
+                              ItemTemplate="{StaticResource KanbanColumnTemplate}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
 
-                            <Style Selector="Border.ColumnContainer:pointerover Border#CountBadge">
-                                <Setter Property="Opacity" Value="1" />
-                            </Style>
-                        </Border.Styles>
-
-                        <DockPanel LastChildFill="True">
-
-                            <!-- Cabeçalho da Coluna -->
-                            <Border DockPanel.Dock="Top" Background="Transparent"
-                                    Padding="8,4" Margin="0,0,0,10">
-                                <Grid ColumnDefinitions="*, Auto, *">
-                                    <TextBlock Grid.Column="1"
-                                               Text="{Binding Title}"
-                                               FontWeight="Bold"
-                                               FontSize="14"
-                                               Foreground="{Binding Title, Converter={StaticResource ColumnTitleToColorConverter}}"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center" />
-
-                                    <Border Grid.Column="2"
-                                            x:Name="CountBadge"
-                                            Background="{StaticResource ColorBorder}"
-                                            CornerRadius="10"
-                                            Padding="6,2"
-                                            HorizontalAlignment="Right">
-
-                                        <TextBlock Text="{Binding Habits.Count}"
-                                                   FontSize="12"
-                                                   FontWeight="Bold"
-                                                   Foreground="{StaticResource ColorTextSecondary}" />
-                                    </Border>
-                                </Grid>
-                            </Border>
-
-                            <!-- Lista de Cards Rolável -->
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <ItemsControl ItemsSource="{Binding Habits}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-
-                                            <!-- CARD DO HÁBITO ORIGINAL -->
-                                            <Border Classes="card" Margin="0,0,0,10" Padding="14"
-                                                    CornerRadius="8"
-                                                    Background="{StaticResource ColorCard}"
-                                                    BorderThickness="0"
-                                                    BoxShadow="0 4 10 0 #A0000000">
-
-                                                <!-- Menu de contexto (botão direito no card) -->
-                                                <Border.ContextMenu>
-                                                    <ContextMenu Background="{StaticResource ColorSurface}"
-                                                                 BorderBrush="{StaticResource ColorBorder}"
-                                                                 x:CompileBindings="False">
-                                                        <MenuItem Header="📅 Ver Histórico"
-                                                                  Command="{Binding $parent[Window].DataContext.OpenHabitHistoryCommand}"
-                                                                  CommandParameter="{Binding}" />
-
-                                                        <MenuItem Header="🗑️ Excluir Hábito"
-                                                                  Command="{Binding $parent[Window].DataContext.DeleteHabitCommand}"
-                                                                  CommandParameter="{Binding}"
-                                                                  Foreground="{StaticResource ColorDanger }" />
-                                                    </ContextMenu>
-                                                </Border.ContextMenu>
-
-                                                <Border.Styles>
-                                                    <Style Selector="Border.card">
-                                                        <Setter Property="Transitions">
-                                                            <Transitions>
-                                                                <TransformOperationsTransition
-                                                                    Property="RenderTransform"
-                                                                    Duration="0:0:0.15" />
-                                                            </Transitions>
-                                                        </Setter>
-                                                    </Style>
-
-                                                    <Style Selector="Border.card:pointerover">
-                                                        <Setter Property="BoxShadow"
-                                                                Value="0 6 16 2 #C0000000" />
-                                                        <Setter Property="RenderTransform"
-                                                                Value="translateY(-0.8px)" />
-                                                    </Style>
-
-                                                    <Style Selector="Button#BtnMoveBack">
-                                                        <Setter Property="Opacity" Value="0.0" />
-                                                        <Setter Property="Transitions">
-                                                            <Transitions>
-                                                                <DoubleTransition Property="Opacity"
-                                                                        Duration="0:0:0.15" />
-                                                            </Transitions>
-                                                        </Setter>
-                                                    </Style>
-
-                                                    <Style Selector="Border#LeftZone:pointerover Button#BtnMoveBack">
-                                                        <Setter Property="Opacity" Value="1.0" />
-                                                    </Style>
-
-                                                    <Style Selector="Button#BtnMoveForward">
-                                                        <Setter Property="Opacity" Value="0.0" />
-                                                        <Setter Property="Transitions">
-                                                            <Transitions>
-                                                                <DoubleTransition Property="Opacity"
-                                                                        Duration="0:0:0.15" />
-                                                            </Transitions>
-                                                        </Setter>
-                                                    </Style>
-
-                                                    <Style Selector="Border#RightZone:pointerover Button#BtnMoveForward">
-                                                        <Setter Property="Opacity" Value="1.0" />
-                                                    </Style>
-                                                </Border.Styles>
-
-                                                <Grid Margin="-14">
-                                                    <!-- Faixa de cor lateral indicando a coluna/status -->
-                                                    <Border Width="3"
-                                                            Margin="14,0,0,0"
-                                                            HorizontalAlignment="Right"
-                                                            CornerRadius="0,8,8,0"
-                                                            Opacity="0.8"
-                                                            Background="{Binding $parent[ItemsControl].DataContext.Title, Converter={StaticResource ColumnTitleToCardBackgroundConverter}}"
-                                                            x:CompileBindings="False" />
-
-                                                    <!-- Conteúdo normal do card -->
-                                                    <StackPanel Spacing="8" Margin="14">
-
-                                                        <DockPanel>
-                                                            <TextBlock Text="{Binding Name}" FontSize="15"
-                                                                    FontWeight="Bold"
-                                                                    Foreground="{StaticResource ColorTextPrimary}"
-                                                                    TextWrapping="Wrap" MaxWidth="180" />
-                                                            <Border Background="{Binding Difficulty, Converter={StaticResource DifficultyBgConverter}}"
-                                                                    CornerRadius="4"
-                                                                    Padding="6,2"
-                                                                    HorizontalAlignment="Right"
-                                                                    VerticalAlignment="Top"
-                                                                    BoxShadow="{Binding Difficulty, Converter={StaticResource DifficultyToGlowConverter}}">
-                                                                <TextBlock Text="{Binding Difficulty}"
-                                                                        FontSize="10" FontWeight="Bold"
-                                                                        Foreground="{Binding Difficulty, Converter={StaticResource DifficultyColorConverter}}" />
-                                                            </Border>
-                                                        </DockPanel>
-
-                                                        <TextBlock Text="{Binding Description}"
-                                                                   FontSize="12"
-                                                                   Foreground="{StaticResource ColorTextSecondary}"
-                                                                   TextWrapping="Wrap" Margin="0,2,0,4"
-                                                                   IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-
-                                                        <WrapPanel Orientation="Horizontal" Margin="0,2">
-                                                            <Border Background="{StaticResource ColorSurface}"
-                                                                    CornerRadius="4" Padding="4,2"
-                                                                    Margin="0,0,6,0">
-                                                                <TextBlock Text="{Binding Category}"
-                                                                        FontSize="10"
-                                                                        Foreground="{StaticResource ColorTextSecondary}" />
-                                                            </Border>
-                                                            <StackPanel Orientation="Horizontal"
-                                                                    VerticalAlignment="Center">
-                                                                <TextBlock Text="✨ +" FontSize="10"
-                                                                        Foreground="{StaticResource ColorAccent}" />
-                                                                <TextBlock Text="{Binding XpGainedToday}"
-                                                                        FontSize="10" FontWeight="Bold"
-                                                                        Foreground="{StaticResource ColorAccent}" />
-                                                                <TextBlock Text=" XP" FontSize="10"
-                                                                        Foreground="{StaticResource ColorAccent}" />
-                                                            </StackPanel>
-                                                        </WrapPanel>
-
-                                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                                            <TextBlock Text="🔥" FontSize="12" />
-                                                            <TextBlock Text="{Binding CurrentStreak}"
-                                                                    FontSize="12"
-                                                                    FontWeight="Bold"
-                                                                    Foreground="{StaticResource ColorStreak}" />
-                                                            <TextBlock Text="streak days" FontSize="11"
-                                                                    Foreground="{StaticResource ColorStreak}"
-                                                                    VerticalAlignment="Center" />
-                                                        </StackPanel>
-
-                                                        <!-- Espaço reservado embaixo pros botões não tamparem o texto -->
-                                                        <Border Height="28" />
-                                                    </StackPanel>
-
-                                                    <!-- CAMADA DE CIMA: zonas de hover ocupando o card inteiro -->
-                                                    <Grid x:Name="ActionGrid"
-                                                          ColumnDefinitions="*, *"
-                                                          x:CompileBindings="False">
-
-                                                        <Border Grid.Column="0"
-                                                                x:Name="LeftZone"
-                                                                Background="Transparent">
-                                                            <Button x:Name="BtnMoveBack"
-                                                                    Command="{Binding $parent[Window].DataContext.MoveHabitBackCommand}"
-                                                                    CommandParameter="{Binding}"
-                                                                    Content="◀"
-                                                                    ToolTip.Tip="Mover para trás"
-                                                                    Background="Transparent"
-                                                                    BorderThickness="0"
-                                                                    Padding="8,4"
-                                                                    Width="36"
-                                                                    HorizontalAlignment="Left"
-                                                                    HorizontalContentAlignment="Center"
-                                                                    VerticalAlignment="Stretch"
-                                                                    VerticalContentAlignment="Center" />
-                                                        </Border>
-
-                                                        <Border Grid.Column="1"
-                                                                x:Name="RightZone"
-                                                                Background="Transparent">
-                                                            <Button x:Name="BtnMoveForward"
-                                                                    Command="{Binding $parent[Window].DataContext.MoveHabitForwardCommand}"
-                                                                    CommandParameter="{Binding}"
-                                                                    Content="▶"
-                                                                    ToolTip.Tip="Mover para frente"
-                                                                    Background="Transparent"
-                                                                    BorderThickness="0"
-                                                                    Padding="8,4"
-                                                                    Width="36"
-                                                                    HorizontalAlignment="Right"
-                                                                    HorizontalContentAlignment="Center"
-                                                                    VerticalAlignment="Stretch"
-                                                                    VerticalContentAlignment="Center" />
-                                                        </Border>
-                                                    </Grid>
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
-                        </DockPanel>
-                    </Border>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
+                    <ItemsControl.Styles>
+                        <Style Selector="Border.ColumnContainer">
+                            <Setter Property="Width" Value="280"/>
+                        </Style>
+                    </ItemsControl.Styles>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
     </Grid>
 </UserControl>

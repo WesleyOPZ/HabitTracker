@@ -15,8 +15,9 @@ public class HabitService {
     public AchievementService Achievements { get; private set; }
     public UserProfile GetProfile() => _profile;
 
-    
-    public HabitService() : this(new JsonStorage()) { }
+
+    public HabitService() : this(new JsonStorage()) {
+    }
 
     public HabitService(JsonStorage storage) {
         _storage = storage;
@@ -73,6 +74,58 @@ public class HabitService {
             CreatedAt = DateTime.UtcNow
         };
         _folders.Add(folder);
+        SaveAllData();
+    }
+
+    public bool RenameFolder(int folderId, String newName) {
+        if (string.IsNullOrWhiteSpace(newName)) return false;
+
+        var folder = _folders.FirstOrDefault(f => f.Id == folderId);
+        if (folder == null) return false;
+
+        folder.Name = newName;
+        SaveAllData();
+        return true;
+    }
+
+    public bool SetFolderColor(int folderId, string? colorHex) {
+        var folder = _folders.FirstOrDefault(f => f.Id == folderId);
+        if (folder == null) return false;
+
+        folder.Color = colorHex;
+        SaveAllData();
+        return true;
+    }
+
+    public DeleteFolderResult DeleteFolder(int folderId) {
+        if (folderId == (int)FolderType.ToDo ||
+            folderId == (int)FolderType.InProgress ||
+            folderId == (int)FolderType.Done) {
+            return new DeleteFolderResult {
+                Success = false,
+                Message = "To-Do, In-Progress, and Done columns cannot be deleted."
+            };
+        }
+
+        var folder = _folders.FirstOrDefault(f => f.Id == folderId);
+        if (folder == null)
+            return new DeleteFolderResult { Success = false, Message = "Column not found." };
+
+        foreach (var habit in _habits.Where(h => h.FolderId == folderId))
+            habit.FolderId = (int)FolderType.ToDo;
+
+        _folders.Remove(folder);
+        SaveAllData();
+
+        return new DeleteFolderResult { Success = true, Message = $"Column '{folder.Name}' Deleted." };
+    }
+
+    public void ReorderFolders(List<int> orderedFoldersIds) {
+        for (int i = 0; i < orderedFoldersIds.Count; i++) {
+            var folder = _folders.FirstOrDefault(f => f.Id == orderedFoldersIds[i]);
+            if (folder != null) folder.DisplayOrder = i;
+        }
+
         SaveAllData();
     }
 
@@ -185,6 +238,12 @@ public class HabitService {
         if (_profile.LastResetDate.Date >= DateTime.Today) return false;
 
         foreach (var habit in _habits) {
+            bool isCoreFolder = habit.FolderId == (int)FolderType.ToDo ||
+                                habit.FolderId == (int)FolderType.InProgress ||
+                                habit.FolderId == (int)FolderType.Done;
+
+            if (!isCoreFolder) continue;
+
             if (habit.FolderId == (int)FolderType.Done) {
                 if (habit.CurrentStreak > habit.LongestStreak)
                     habit.LongestStreak = habit.CurrentStreak;
@@ -198,11 +257,12 @@ public class HabitService {
 
                 habit.CurrentStreak = 0;
             }
-            
+
             habit.FolderId = (int)FolderType.ToDo;
             habit.IsInProgress = false;
             habit.XpGainedToday = 0;
         }
+
         _profile.LastResetDate = DateTime.Today;
         SaveAllData();
         _storage.SaveProfile(_profile);

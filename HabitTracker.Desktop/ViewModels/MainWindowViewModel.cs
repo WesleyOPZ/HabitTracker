@@ -110,6 +110,74 @@ public partial class MainWindowViewModel : ViewModelBase {
     }
 
     [RelayCommand]
+    private async Task OpenCreateColumn() {
+        var mainWindow = (Application.Current?.ApplicationLifetime
+            as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+        if (mainWindow == null) return;
+
+        var viewModel = new TextInputViewModel("New Column", "Column Name");
+        var dialog = new TextInputDialog(viewModel);
+        await dialog.ShowDialog(mainWindow);
+
+        if (viewModel.Confirmed) {
+            _habitService.CreateFolder(viewModel.Text.Trim());
+            LoadHabits();
+        }
+    }
+
+    [RelayCommand]
+    private async Task RenameColumn(KanbanColumnViewModel column) {
+        var mainWindow = (Application.Current?.ApplicationLifetime
+            as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+        if (mainWindow == null) return;
+
+        var viewModel = new TextInputViewModel("Rename Column", "New Name", column.Title);
+        var dialog = new TextInputDialog(viewModel);
+        await dialog.ShowDialog(mainWindow);
+
+        if (viewModel.Confirmed) {
+            _habitService.RenameFolder(column.Id, viewModel.Text.Trim());
+            column.Title = viewModel.Text.Trim();
+        }
+    }
+
+    [RelayCommand]
+    private async Task DeleteColumn(KanbanColumnViewModel column) {
+        string message = column.Habits.Count > 0
+            ? $"Column '{column.Title}' has '{column.Habits.Count}' Habits. They will be moved to To-Do. Continue?"
+            : $"Delete column '{column.Title}'?";
+
+        var confirmBox = MessageBoxManager.GetMessageBoxStandard("Delete Column", message, ButtonEnum.YesNo);
+        if (await confirmBox.ShowAsync() != ButtonResult.Yes) return;
+
+        var result = _habitService.DeleteFolder(column.Id);
+        if (!result.Success) {
+            var box = MessageBoxManager.GetMessageBoxStandard("Could not delete", result.Message, ButtonEnum.Ok);
+            await box.ShowAsync();
+            return;
+        }
+
+        LoadHabits();
+    }
+
+    [RelayCommand]
+    private async Task ChangeColumnColor(KanbanColumnViewModel column) {
+        var mainWindow = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)
+            ?.MainWindow;
+        if (mainWindow == null) return;
+
+        var viewModel = new ColorPickerViewModel(column.Color);
+        var dialog = new ColorPickerDialog(viewModel);
+        await dialog.ShowDialog(mainWindow);
+
+        if (viewModel.Confirmed) {
+            string hex = viewModel.Color.ToString();
+            _habitService.SetFolderColor(column.Id, hex);
+            column.Color = hex;
+        }
+    }
+
+    [RelayCommand]
     private async Task DeleteHabit(Habit habit) {
         var box = MessageBoxManager.GetMessageBoxStandard(
             "Delete Habit",
@@ -151,13 +219,15 @@ public partial class MainWindowViewModel : ViewModelBase {
 
     [RelayCommand]
     public async Task MoveHabitForward(Habit habit) {
-        int next = habit.FolderId + 1;
-        if (next > (int)FolderType.Done) return;
+        int currentIndex = KanbanColumns.ToList().FindIndex(c => c.Id == habit.FolderId);
+        if (currentIndex < 0 || currentIndex >= KanbanColumns.Count - 1) return;
 
+        int targetFolderId = KanbanColumns[currentIndex + 1].Id;
         int oldFolderId = habit.FolderId;
-        var result = _habitService.MoveHabitToFolder(habit.Id, next);
-        MoveHabitInUi(new MoveHabitArgs(habit, oldFolderId, next));
+        var result = _habitService.MoveHabitToFolder(habit.Id, targetFolderId);
+        MoveHabitInUi(new MoveHabitArgs(habit, oldFolderId, targetFolderId));
         RefreshXpStats();
+
 
         if (result.LeveledUp) {
             var box = MessageBoxManager.GetMessageBoxStandard(
@@ -172,12 +242,13 @@ public partial class MainWindowViewModel : ViewModelBase {
 
     [RelayCommand]
     public async Task MoveHabitBack(Habit habit) {
-        int prev = habit.FolderId - 1;
-        if (prev < (int)FolderType.ToDo) return;
+        int currentIndex = KanbanColumns.ToList().FindIndex(c => c.Id == habit.FolderId);
+        if (currentIndex <= 0) return;
 
+        int targetFolderId = KanbanColumns[currentIndex - 1].Id;
         int oldFolderId = habit.FolderId;
-        var result = _habitService.MoveHabitToFolder(habit.Id, prev);
-        MoveHabitInUi(new MoveHabitArgs(habit, oldFolderId, prev));
+        var result = _habitService.MoveHabitToFolder(habit.Id, targetFolderId);
+        MoveHabitInUi(new MoveHabitArgs(habit, oldFolderId, targetFolderId));
         RefreshXpStats();
 
         await ShowAchievementPopups(result.NewAchievements);
@@ -212,6 +283,14 @@ public partial class MainWindowViewModel : ViewModelBase {
     [RelayCommand]
     private void ShowTab(ActiveTab tab) => ActiveTab = tab;
 
+    public void MoveColumnTo(KanbanColumnViewModel column, int newIndex) {
+        int oldIndex = KanbanColumns.IndexOf(column);
+        if (oldIndex < 0 || oldIndex == newIndex) return;
+
+        KanbanColumns.Move(oldIndex, newIndex);
+        _habitService.ReorderFolders(KanbanColumns.Select(c => c.Id).ToList());
+    }
+
     // ===== Partial change handlers =====
     partial void OnSelectedCategoryChanged(Category? value) {
         ApplyFilter();
@@ -221,14 +300,10 @@ public partial class MainWindowViewModel : ViewModelBase {
     private void LoadHabits() {
         _allHabits = _habitService.GetHabits();
 
-        if (KanbanColumns.Count == 0) {
-            KanbanColumns.Add(new KanbanColumnViewModel((int)FolderType.ToDo, "To-Do"));
-            KanbanColumns.Add(new KanbanColumnViewModel((int)FolderType.InProgress, "In-Progress"));
-            KanbanColumns.Add(new KanbanColumnViewModel((int)FolderType.Done, "Done"));
-        }
+        SyncKanbanColumns();
 
         ApplyFilter();
-        
+
         RefreshXpStats();
 
         Achievements.Clear();
@@ -236,6 +311,30 @@ public partial class MainWindowViewModel : ViewModelBase {
             Achievements.Add(achievement);
 
         LoadProfile();
+    }
+
+    private void SyncKanbanColumns() {
+        var folders = _habitService.GetFolders();
+
+        for (int i = KanbanColumns.Count - 1; i >= 0; i--) {
+            if (folders.All(f => f.Id != KanbanColumns[i].Id))
+                KanbanColumns.RemoveAt(i);
+        }
+
+        for (int i = 0; i < folders.Count; i++) {
+            var folder = folders[i];
+            var existing = KanbanColumns.FirstOrDefault(c => c.Id == folder.Id);
+
+            if (existing == null) {
+                KanbanColumns.Insert(
+                    Math.Min(i, KanbanColumns.Count), new KanbanColumnViewModel(folder.Id, folder.Name, folder.Color));
+            } else {
+                existing.Title = folder.Name;
+                existing.Color = folder.Color;
+                int currentIndex = KanbanColumns.IndexOf(existing);
+                if (currentIndex != 1) KanbanColumns.Move(currentIndex, i);
+            }
+        }
     }
 
     private void ApplyFilter() {
@@ -292,7 +391,7 @@ public partial class MainWindowViewModel : ViewModelBase {
         CurrentXp = totalXp;
         XpInCurrentLevel = LevelSystem.GetXpProgressInCurrentLevel(totalXp, Level);
         XpForNextLevel = LevelSystem.GetXpForNextLevel(Level);
-        
+
         LoadStatistics();
     }
 
