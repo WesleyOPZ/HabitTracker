@@ -133,7 +133,9 @@ public class HabitService {
     public CreateHabitResult CreateHabit(string name, string description = "",
         Difficulty difficulty = Difficulty.Normal,
         Category category = Category.Personal,
-        int? folderId = null) {
+        int? folderId = null,
+        List<string>? tags = null,
+        string? imagePath = null) {
         if (string.IsNullOrWhiteSpace(name)) {
             return new CreateHabitResult { Success = false, Message = "Habit name cannot be empty!" };
         }
@@ -151,7 +153,9 @@ public class HabitService {
             Difficulty = difficulty,
             Category = category,
             CompletedDates = new List<DateTime>(),
-            FolderId = targetFolderId
+            FolderId = targetFolderId,
+            Tags = tags ?? new List<string>(),
+            ImagePath = imagePath
         };
 
         _habits.Add(habit);
@@ -281,7 +285,17 @@ public class HabitService {
         return new DeleteHabitResult { Success = true, Message = $"Habit '{habit.Name}' Deleted." };
     }
 
+    public bool UpdateHabitTagsAndImage(int habitId, List<string> tags, string? imagePath) {
+        var habit = _habits.FirstOrDefault(h => h.Id == habitId);
+        if (habit == null) return false;
 
+        habit.Tags = tags ?? new List<string>();
+        habit.ImagePath = imagePath;
+
+        SaveAllData();
+        return true;
+    }
+    
     public List<Habit> GetHabits() {
         return _habits.OrderByDescending(h => h.CurrentStreak).ToList();
     }

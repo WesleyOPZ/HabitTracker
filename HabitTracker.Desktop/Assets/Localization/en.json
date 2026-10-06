@@ -1,0 +1,9 @@
+{
+  "Tag.Morning": "Morning",
+  "Tag.Evening": "Evening",
+  "Tag.Night": "Night",
+  "Tag.Study": "Study",
+  "Tag.Personal": "Personal",
+  "Tag.Bug": "Bug",
+  "Tag.Urgent": "Urgent"
+}

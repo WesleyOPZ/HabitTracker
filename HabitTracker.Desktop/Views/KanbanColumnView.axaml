@@ -1,0 +1,116 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:HabitTracker.Desktop.ViewModels"
+             xmlns:views="using:HabitTracker.Desktop.Views"
+             xmlns:converters="using:HabitTracker.Desktop.Converters"
+             xmlns:models="clr-namespace:HabitTracker.Core.Models;assembly=HabitTracker.Core"
+             x:Class="HabitTracker.Desktop.Views.KanbanColumnView"
+             x:DataType="vm:KanbanColumnViewModel">
+
+    <UserControl.Resources>
+        <converters:ColumnColorConverter x:Key="ColumnColorConverter" />
+    </UserControl.Resources>
+
+    <Border Classes="ColumnContainer"
+            Background="{StaticResource ColorSidebar}" CornerRadius="8" Margin="6"
+            Padding="12"
+            DragDrop.AllowDrop="True"
+            DragDrop.DragOver="Column_DragOver"
+            DragDrop.Drop="Column_Drop">
+
+        <Border.Styles>
+            <Style Selector="Border.ColumnContainer Border#CountBadge">
+                <Setter Property="Opacity" Value="0" />
+                <Setter Property="Transitions">
+                    <Transitions>
+                        <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                    </Transitions>
+                </Setter>
+            </Style>
+
+            <Style Selector="Border.ColumnContainer:pointerover Border#CountBadge">
+                <Setter Property="Opacity" Value="1" />
+            </Style>
+        </Border.Styles>
+
+        <DockPanel LastChildFill="True">
+
+            <!-- Cabeçalho da Coluna -->
+            <Border DockPanel.Dock="Top" Background="Transparent"
+                    Padding="8,4" Margin="0,0,0,10"
+                    Cursor="Hand"
+                    PointerPressed="ColumnHeader_PointerPressed"
+                    PointerMoved="ColumnHeader_PointerMoved">
+                <Grid ColumnDefinitions="Auto, *, Auto, Auto">
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding Title}"
+                               FontWeight="Bold"
+                               FontSize="14"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+                    <TextBlock.Foreground>
+                        <MultiBinding Converter="{StaticResource ColumnColorConverter}">
+                            <Binding Path="Color" />
+                            <Binding Path="Id" />
+                        </MultiBinding>
+                    </TextBlock.Foreground>
+
+                    <Button Grid.Column="2"
+                            Content="⋮"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="4"
+                            Foreground="{StaticResource ColorTextSecondary}"
+                            x:CompileBindings="False">
+                        <Button.Flyout>
+                            <Flyout Placement="BottomEdgeAlignedRight">
+                                <StackPanel Spacing="4" MinWidth="140">
+                                    <Button Content="🎨 Color"
+                                            Command="{Binding $parent[Window].DataContext.ChangeColumnColorCommand}"
+                                            CommandParameter="{Binding}"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Left" />
+                                    <Button Content="✏️ Renomear"
+                                            Command="{Binding $parent[Window].DataContext.RenameColumnCommand}"
+                                            CommandParameter="{Binding}"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Left" />
+                                    <Button Content="🗑️ Excluir"
+                                            Command="{Binding $parent[Window].DataContext.DeleteColumnCommand}"
+                                            CommandParameter="{Binding}"
+                                            IsVisible="{Binding IsCustom}"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Left" />
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+
+                    <Border Grid.Column="3"
+                            x:Name="CountBadge"
+                            Background="{StaticResource ColorBorder}"
+                            CornerRadius="10"
+                            Padding="6,2"
+                            HorizontalAlignment="Right">
+
+                        <TextBlock Text="{Binding Habits.Count}"
+                                   FontSize="12"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource ColorTextSecondary}" />
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- Lista de Cards Rolável -->
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Habits}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="models:Habit">
+                            <views:HabitCardView />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </DockPanel>
+    </Border>
+</UserControl>

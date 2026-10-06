@@ -9,7 +9,16 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<AvaloniaResource Include="Assets\**" />
+		<AvaloniaResource Include="Assets\**" Exclude="Assets\Localization\**" />
+	</ItemGroup>
+
+	<!-- Arquivos de tradução: precisam ser cópia solta em disco (CopyToOutputDirectory),
+	     não AvaloniaResource embutido, porque LocalizationManager lê via File.ReadAllText
+	     a partir de AppContext.BaseDirectory em runtime. -->
+	<ItemGroup>
+		<None Include="Assets\Localization\*.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -44,24 +53,32 @@
 			<SubType>Code</SubType>
 		</Compile>
 		<Compile Update="Views\HabitsView.axaml.cs">
-		  <DependentUpon>HabitsView.axaml</DependentUpon>
-		  <SubType>Code</SubType>
+			<DependentUpon>HabitsView.axaml</DependentUpon>
+			<SubType>Code</SubType>
 		</Compile>
 		<Compile Update="Views\AchievementsView.axaml.cs">
-		  <DependentUpon>AchievementsView.axaml</DependentUpon>
-		  <SubType>Code</SubType>
+			<DependentUpon>AchievementsView.axaml</DependentUpon>
+			<SubType>Code</SubType>
 		</Compile>
 		<Compile Update="Views\ProfileView.axaml.cs">
-		  <DependentUpon>ProfileView.axaml</DependentUpon>
-		  <SubType>Code</SubType>
+			<DependentUpon>ProfileView.axaml</DependentUpon>
+			<SubType>Code</SubType>
 		</Compile>
 		<Compile Update="Views\TextInputDialog.axaml.cs">
-		  <DependentUpon>TextInputDialog.axaml</DependentUpon>
-		  <SubType>Code</SubType>
+			<DependentUpon>TextInputDialog.axaml</DependentUpon>
+			<SubType>Code</SubType>
 		</Compile>
 		<Compile Update="Views\ColorPickerDialog.axaml.cs">
-		  <SubType>Code</SubType>
-		  <DependentUpon>ColorPickerDialog.axaml</DependentUpon>
+			<SubType>Code</SubType>
+			<DependentUpon>ColorPickerDialog.axaml</DependentUpon>
+		</Compile>
+		<Compile Update="Views\KanbanColumnView.axaml.cs">
+			<DependentUpon>KanbanColumnView.axaml</DependentUpon>
+			<SubType>Code</SubType>
+		</Compile>
+		<Compile Update="Views\HabitCardView.axaml.cs">
+			<DependentUpon>HabitCardView.axaml</DependentUpon>
+			<SubType>Code</SubType>
 		</Compile>
 	</ItemGroup>
 </Project>

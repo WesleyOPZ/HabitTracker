@@ -15,12 +15,15 @@ using HabitTracker.Desktop.Views;
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
 using HabitTracker.Desktop.Models;
+using Avalonia.Platform.Storage;
+using HabitTracker.Core.Localization;
 
 namespace HabitTracker.Desktop.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase {
     // ===== Campos privados =====
     private readonly HabitService _habitService;
+    private readonly ImageStorageService _imageStorage;
     private List<Habit> _allHabits = new();
 
     // ===== Propriedades públicas (não observáveis) =====
@@ -41,6 +44,7 @@ public partial class MainWindowViewModel : ViewModelBase {
     // ===== Estado de navegação / filtro =====
     [ObservableProperty] private ActiveTab _activeTab = ActiveTab.Habits;
     [ObservableProperty] private Category? _selectedCategory;
+    [ObservableProperty] private HabitSortMode _sortMode = HabitSortMode.Priority;
 
     // ===== Nível / XP (topo do sidebar) =====
     [ObservableProperty] private int _level;
@@ -73,10 +77,12 @@ public partial class MainWindowViewModel : ViewModelBase {
     public MainWindowViewModel() {
         if (Design.IsDesignMode) {
             _habitService = null!;
+            _imageStorage = null!;
             return;
         }
 
         _habitService = new HabitService();
+        _imageStorage = new ImageStorageService();
 
         // Tenta rodar o reset. Se rodar (virou o dia), recarrega tudo.
         if (_habitService.ProcessDailyReset()) {
@@ -204,6 +210,42 @@ public partial class MainWindowViewModel : ViewModelBase {
         await dialog.ShowDialog(mainWindow);
     }
 
+    [RelayCommand]
+    private async Task AddImageToHabit(Habit habit) {
+        var mainWindow = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)
+            ?.MainWindow;
+        if (mainWindow == null) return;
+
+        var files = await mainWindow.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions {
+            Title = "Choose Habit image",
+            AllowMultiple = false,
+            FileTypeFilter = new[] {
+                new FilePickerFileType("Images") {
+                    Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.webp", "*.gif" }
+                }
+            }
+        });
+
+        var file = files.FirstOrDefault();
+        if (file == null) return;
+
+        string? localPath = file.TryGetLocalPath();
+        if (localPath == null) return;
+
+        string relativePath = _imageStorage.SaveImage(localPath, habit.ImagePath);
+        _habitService.UpdateHabitTagsAndImage(habit.Id, habit.Tags, relativePath);
+
+        LoadHabits();
+    }
+
+    [RelayCommand]
+    private void ChangeLanguage(string cultureCode) {
+        LocalizationManager.Instance.SetCulture(cultureCode);
+        var profile = _habitService.GetProfile();
+        profile.LanguageCode = cultureCode;
+        _habitService.UpdateProfile(profile);
+    }
+
     // ===== Commands: Kanban (mover hábito entre colunas) =====
     [RelayCommand]
     private void MoveHabitInUi(MoveHabitArgs args) {
@@ -296,6 +338,10 @@ public partial class MainWindowViewModel : ViewModelBase {
         ApplyFilter();
     }
 
+    partial void OnSortModeChanged(HabitSortMode value) {
+        ApplyFilter();
+    }
+
     // ===== Helpers privados: carregamento/atualização de estado =====
     private void LoadHabits() {
         _allHabits = _habitService.GetHabits();
@@ -346,7 +392,11 @@ public partial class MainWindowViewModel : ViewModelBase {
             ? _allHabits
             : _allHabits.Where(h => h.Category == SelectedCategory);
 
-        foreach (var habit in filteredHabits) {
+        var sortedHabits = SortMode == HabitSortMode.Tag
+            ? SortByTag(filteredHabits)
+            : SortByPriority(filteredHabits);
+
+        foreach (var habit in sortedHabits) {
             int targetFolder = habit.FolderId > 0 ? habit.FolderId : (int)FolderType.ToDo;
 
             var targetColumn = KanbanColumns.FirstOrDefault(c => c.Id == targetFolder);
@@ -356,6 +406,21 @@ public partial class MainWindowViewModel : ViewModelBase {
         }
     }
 
+    private static IEnumerable<Habit> SortByPriority(IEnumerable<Habit> habits) =>
+        habits
+            .OrderByDescending(h => (int)h.Difficulty)
+            .ThenByDescending(h => h.CurrentStreak);
+
+    private static IEnumerable<Habit> SortByTag(IEnumerable<Habit> habits) =>
+        habits
+            // false (0) vem antes de true (1): hábitos COM tag primeiro, sem tag agrupados no final.
+            .OrderBy(h => h.Tags.Count == 0)
+            // Tags[0] = primeira tag adicionada (List<string> preserva ordem de inserção).
+            // O dia que existir reordenação manual via setinhas, isso já acompanha sem mudar nada aqui.
+            .ThenBy(h => h.Tags.Count > 0 ? TagLocalization.GetLabel(h.Tags[0]) : string.Empty,
+                StringComparer.CurrentCultureIgnoreCase)
+            .ThenByDescending(h => h.CurrentStreak);
+        
     private void LoadProfile() {
         var profile = _habitService.GetProfile();
         ProfileUserName = string.IsNullOrEmpty(profile.UserName) ? "No name set" : profile.UserName;
@@ -366,6 +431,8 @@ public partial class MainWindowViewModel : ViewModelBase {
             : "Not specified";
         ProfileMemberSince = profile.DateCreated.ToString("dd/MM/yyyy");
         GlobalLongestStreak = profile.GlobalLongestStreak;
+
+        LocalizationManager.Instance.Initialize(profile.LanguageCode);
     }
 
     private void LoadStatistics() {

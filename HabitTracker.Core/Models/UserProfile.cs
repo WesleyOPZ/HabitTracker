@@ -11,4 +11,5 @@ public class UserProfile {
     public DateTime DateCreated { get; set; }
     public List<AchievementType> FeaturedAchievements { get; set; } = new();
     public DateTime LastResetDate { get; set; } = DateTime.Today;
+    public string? LanguageCode { get; set; }
 }

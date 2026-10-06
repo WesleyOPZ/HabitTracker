@@ -1,0 +1,268 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="using:HabitTracker.Core.Models"
+             xmlns:converters="using:HabitTracker.Desktop.Converters"
+             xmlns:sys="using:System"
+             x:Class="HabitTracker.Desktop.Views.HabitCardView"
+             x:DataType="models:Habit">
+
+    <UserControl.Resources>
+        <converters:DifficultyColorConverter x:Key="DifficultyColorConverter" />
+        <converters:DifficultyBgConverter x:Key="DifficultyBgConverter" />
+        <converters:DifficultyToGlowConverter x:Key="DifficultyToGlowConverter" />
+        <converters:ColumnIdToCardBackgroundConverter x:Key="ColumnIdToCardBackgroundConverter" />
+        <converters:HabitImagePathToBitmapConverter x:Key="HabitImagePathToBitmapConverter" />
+        <converters:TagLabelConverter x:Key="TagLabelConverter" />
+    </UserControl.Resources>
+
+    <!-- CARD DO HÁBITO -->
+    <Border Classes="card" Margin="0,0,0,10" Padding="14"
+            CornerRadius="8"
+            Background="{StaticResource ColorCard}"
+            BorderThickness="0"
+            BoxShadow="0 4 10 0 #A0000000">
+
+        <!-- Menu de contexto (botão direito no card) -->
+        <Border.ContextMenu>
+            <ContextMenu Background="{StaticResource ColorSurface}"
+                         BorderBrush="{StaticResource ColorBorder}"
+                         x:CompileBindings="False">
+                <MenuItem Header="🖼️ Adicionar/Trocar Imagem"
+                          Command="{Binding $parent[Window].DataContext.AddImageToHabitCommand}"
+                          CommandParameter="{Binding}" />
+
+                <MenuItem Header="📅 Ver Histórico"
+                          Command="{Binding $parent[Window].DataContext.OpenHabitHistoryCommand}"
+                          CommandParameter="{Binding}" />
+
+                <MenuItem Header="🗑️ Excluir Hábito"
+                          Command="{Binding $parent[Window].DataContext.DeleteHabitCommand}"
+                          CommandParameter="{Binding}"
+                          Foreground="{StaticResource ColorDanger}" />
+            </ContextMenu>
+        </Border.ContextMenu>
+
+        <Border.Styles>
+            <Style Selector="Border.card">
+                <Setter Property="Transitions">
+                    <Transitions>
+                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" />
+                    </Transitions>
+                </Setter>
+            </Style>
+
+            <Style Selector="Border.card:pointerover">
+                <Setter Property="BoxShadow" Value="0 6 16 2 #C0000000" />
+                <Setter Property="RenderTransform" Value="translateY(-0.8px)" />
+            </Style>
+
+            <Style Selector="Button#BtnMoveBack">
+                <Setter Property="Opacity" Value="0.0" />
+                <Setter Property="Transitions">
+                    <Transitions>
+                        <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                    </Transitions>
+                </Setter>
+            </Style>
+
+            <Style Selector="Border#LeftZone:pointerover Button#BtnMoveBack">
+                <Setter Property="Opacity" Value="1.0" />
+            </Style>
+
+            <Style Selector="Button#BtnMoveForward">
+                <Setter Property="Opacity" Value="0.0" />
+                <Setter Property="Transitions">
+                    <Transitions>
+                        <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                    </Transitions>
+                </Setter>
+            </Style>
+
+            <Style Selector="Border#RightZone:pointerover Button#BtnMoveForward">
+                <Setter Property="Opacity" Value="1.0" />
+            </Style>
+
+            <!-- Chip de tag -->
+            <Style Selector="Border.tagChip">
+                <Setter Property="Background" Value="{StaticResource ColorSurface}" />
+                <Setter Property="CornerRadius" Value="10" />
+                <Setter Property="Padding" Value="6,2" />
+                <Setter Property="Margin" Value="0,0,4,4" />
+            </Style>
+        </Border.Styles>
+
+        <Grid Margin="-14">
+            <!-- Faixa de cor lateral indicando a coluna/status -->
+            <Border Width="3"
+                    Margin="14,0,0,0"
+                    HorizontalAlignment="Right"
+                    CornerRadius="0,8,8,0"
+                    Opacity="0.8"
+                    Background="{Binding $parent[ItemsControl].DataContext.Id, Converter={StaticResource ColumnIdToCardBackgroundConverter}}"
+                    x:CompileBindings="False" />
+
+            <!-- Conteúdo estruturado em linhas fixas: Header / Descrição / Tags / Rodapé -->
+            <Grid Margin="14" RowDefinitions="Auto,Auto,Auto,Auto,28">
+
+                <!-- Linha 0: Nome (1 linha, com reticências) + ícone de imagem + badge de dificuldade -->
+                <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,6">
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding Name}"
+                               FontSize="15"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource ColorTextPrimary}"
+                               TextWrapping="NoWrap"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{Binding Name}"
+                               VerticalAlignment="Center" />
+
+                    <!-- Ícone de imagem: só aparece se ImagePath estiver preenchido.
+                         Hover: ToolTip mostra preview pequeno automaticamente.
+                         Clique: abre o Popup maior. -->
+                    <Button Grid.Column="1"
+                            x:Name="ImageIconButton"
+                            Content="🖼️"
+                            FontSize="13"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="4,0"
+                            Margin="4,0,0,0"
+                            Click="ImageIcon_Click"
+                            IsVisible="{Binding ImagePath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <ToolTip.Tip>
+                            <Image Source="{Binding ImagePath, Converter={StaticResource HabitImagePathToBitmapConverter}}"
+                                   MaxWidth="140" MaxHeight="140" Stretch="Uniform" />
+                        </ToolTip.Tip>
+                    </Button>
+
+                    <Border Grid.Column="2"
+                            Background="{Binding Difficulty, Converter={StaticResource DifficultyBgConverter}}"
+                            CornerRadius="4"
+                            Padding="6,2"
+                            Margin="4,0,0,0"
+                            VerticalAlignment="Center"
+                            BoxShadow="{Binding Difficulty, Converter={StaticResource DifficultyToGlowConverter}}">
+                        <TextBlock Text="{Binding Difficulty}"
+                                   FontSize="10" FontWeight="Bold"
+                                   Foreground="{Binding Difficulty, Converter={StaticResource DifficultyColorConverter}}" />
+                    </Border>
+                </Grid>
+
+                <!-- Popup com a imagem em tamanho maior, aberto pelo clique no ícone -->
+                <Popup Grid.Row="0"
+                       x:Name="ImagePreviewPopup"
+                       Placement="Bottom"
+                       IsLightDismissEnabled="True"
+                       x:CompileBindings="False">
+                    <Border Background="{StaticResource ColorSurface}"
+                            BorderBrush="{StaticResource ColorBorder}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="6">
+                        <Image Source="{Binding ImagePath, Converter={StaticResource HabitImagePathToBitmapConverter}}"
+                               MaxWidth="300" MaxHeight="300" Stretch="Uniform" />
+                    </Border>
+                </Popup>
+
+                <!-- Linha 1: Descrição — altura máxima fixa, scroll interno se for longa -->
+                <ScrollViewer Grid.Row="1"
+                              MaxHeight="60"
+                              Margin="0,0,0,6"
+                              VerticalScrollBarVisibility="Auto"
+                              IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    <TextBlock Text="{Binding Description}"
+                               FontSize="12"
+                               Foreground="{StaticResource ColorTextSecondary}"
+                               TextWrapping="Wrap" />
+                </ScrollViewer>
+
+                <!-- Linha 2: Tags (chips) + Category + XP -->
+                <StackPanel Grid.Row="2" Spacing="4" Margin="0,0,0,6">
+                    <ItemsControl ItemsSource="{Binding Tags}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="sys:String">
+                                <Border Classes="tagChip">
+                                    <TextBlock Text="{Binding Converter={StaticResource TagLabelConverter}}"
+                                               FontSize="10"
+                                               Foreground="{StaticResource ColorTextSecondary}" />
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <WrapPanel Orientation="Horizontal">
+                        <Border Background="{StaticResource ColorSurface}"
+                                CornerRadius="4" Padding="4,2"
+                                Margin="0,0,6,0">
+                            <TextBlock Text="{Binding Category}"
+                                       FontSize="10"
+                                       Foreground="{StaticResource ColorTextSecondary}" />
+                        </Border>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="✨ +" FontSize="10" Foreground="{StaticResource ColorAccent}" />
+                            <TextBlock Text="{Binding XpGainedToday}" FontSize="10" FontWeight="Bold"
+                                       Foreground="{StaticResource ColorAccent}" />
+                            <TextBlock Text=" XP" FontSize="10" Foreground="{StaticResource ColorAccent}" />
+                        </StackPanel>
+                    </WrapPanel>
+                </StackPanel>
+
+                <!-- Linha 3: Streak -->
+                <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="4">
+                    <TextBlock Text="🔥" FontSize="12" />
+                    <TextBlock Text="{Binding CurrentStreak}" FontSize="12" FontWeight="Bold"
+                               Foreground="{StaticResource ColorStreak}" />
+                    <TextBlock Text="streak days" FontSize="11"
+                               Foreground="{StaticResource ColorStreak}"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+
+                <!-- Linha 4: reserva de espaço pros botões de mover não tamparem o conteúdo -->
+            </Grid>
+
+            <!-- CAMADA DE CIMA: zonas de hover ocupando o card inteiro -->
+            <Grid x:Name="ActionGrid"
+                  ColumnDefinitions="*, *"
+                  VerticalAlignment="Bottom"
+                  Height="36"
+                  x:CompileBindings="False">
+                <Border Grid.Column="0" x:Name="LeftZone" Background="Transparent">
+                    <Button x:Name="BtnMoveBack"
+                            Command="{Binding $parent[Window].DataContext.MoveHabitBackCommand}"
+                            CommandParameter="{Binding}"
+                            Content="◀"
+                            ToolTip.Tip="Mover para trás"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="8,4"
+                            Width="36"
+                            HorizontalAlignment="Left"
+                            HorizontalContentAlignment="Center"
+                            VerticalAlignment="Stretch"
+                            VerticalContentAlignment="Center" />
+                </Border>
+
+                <Border Grid.Column="1" x:Name="RightZone" Background="Transparent">
+                    <Button x:Name="BtnMoveForward"
+                            Command="{Binding $parent[Window].DataContext.MoveHabitForwardCommand}"
+                            CommandParameter="{Binding}"
+                            Content="▶"
+                            ToolTip.Tip="Mover para frente"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="8,4"
+                            Width="36"
+                            HorizontalAlignment="Right"
+                            HorizontalContentAlignment="Center"
+                            VerticalAlignment="Stretch"
+                            VerticalContentAlignment="Center" />
+                </Border>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

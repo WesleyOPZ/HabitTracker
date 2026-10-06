@@ -16,6 +16,12 @@ public class Habit
     public int XpGainedToday {  get; set; }
     public bool IsInProgress { get; set; }
     
+    // ===== Tags e Imagem =====
+    public List<string> Tags { get; set; } = new();
+    
+    
+    public string? ImagePath { get; set; }
+    
     public bool IsCompletedToday()
     {
         return CompletedDates.Any(d => d.Date == DateTime.Today);
